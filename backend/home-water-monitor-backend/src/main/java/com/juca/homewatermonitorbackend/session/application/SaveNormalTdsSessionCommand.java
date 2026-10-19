@@ -1,0 +1,31 @@
+package com.juca.homewatermonitorbackend.session.application;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.List;
+import java.util.UUID;
+
+public record SaveNormalTdsSessionCommand(
+        UUID sessionId,
+        String deviceId,
+        Instant startedAt,
+        int samplingIntervalMs,
+        BigDecimal temperatureAssumedC,
+        String calibrationVersion,
+        List<Measurement> measurements
+) {
+
+    public SaveNormalTdsSessionCommand {
+        measurements = List.copyOf(measurements);
+    }
+
+    public record Measurement(
+            int seq,
+            int elapsedMs,
+            BigDecimal tdsPpm,
+            boolean isWarmup,
+            BigDecimal rawVoltageMv
+    ) {
+
+    }
+}

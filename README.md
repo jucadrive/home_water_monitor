@@ -39,10 +39,23 @@ cd backend/home-water-monitor-backend
 .\gradlew.bat test --tests "com.juca.homewatermonitorbackend.measurement.domain.TdsStatisticsCalculatorTest"
 ```
 
-전체 테스트의 `contextLoads`는 Spring 컨텍스트를 시작하므로 DB와 환경변수가 필요하다. 통합 테스트의 Testcontainers 연결은 아직 작성하지 않았다.
+정상 세션 저장 통합 테스트는 Testcontainers PostgreSQL 18을 사용한다. Docker Desktop을 실행한 상태에서 같은 Gradle 프로젝트 폴더에서 실행한다. 테스트가 DB 접속 정보를 등록하므로 개발 DB 환경변수는 필요하지 않다.
+
+```powershell
+# 정상 커밋·저장 중 실패·커밋 실패 테스트 3개 실행
+./gradlew.bat test --tests "com.juca.homewatermonitorbackend.session.application.SaveNormalTdsSessionServiceIntegrationTest"
+```
+
+각 통합 테스트의 통과는 사용자가 보고했다. 전체 테스트의 `contextLoads`에는 Testcontainers 연결이 없으므로 별도로 개발 DB와 환경변수가 필요하다.
+
+이미 적용한 Flyway V1/V2는 공백·정렬을 포함해 수정하지 않는다. 스키마 변경은 새 마이그레이션으로 추가한다.
 
 ## 이어서 작업
 
 Codex에는 이 저장소 루트를 프로젝트로 연다. [최신 인계](docs/HANDOFF.md)를 먼저 읽고 한 단계씩 이어간다.
 
+현재 재개 지점은 [측정 도메인 비교 코드와 단위 테스트](docs/NEXT_MEASUREMENT_COMPARISON.md)다. 해당 문서의 코드는 아직 작성하지 않았으며 사용자가 다음 작업에서 직접 작성한다.
+
 PC를 바꾸기 전 진행 메모와 변경 파일을 커밋·푸시하고, 이어받는 PC는 수정 전 작업 트리가 깨끗한지 확인한 뒤 `git pull --ff-only`로 갱신한다.
+
+Git 커밋·푸시는 `home-water-monitor` 루트에서 소스·인프라·문서를 함께 관리한다. Gradle 실행 위치인 `backend/home-water-monitor-backend`와 구분한다.
