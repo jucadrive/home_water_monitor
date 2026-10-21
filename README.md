@@ -46,7 +46,7 @@ cd backend/home-water-monitor-backend
 ./gradlew.bat test --tests "com.juca.homewatermonitorbackend.session.application.SaveNormalTdsSessionServiceIntegrationTest"
 ```
 
-각 통합 테스트의 통과는 사용자가 보고했다. 전체 테스트의 `contextLoads`에는 Testcontainers 연결이 없으므로 별도로 개발 DB와 환경변수가 필요하다.
+전체 테스트의 contextLoads도 Testcontainers를 사용한다. 전체 검증에는 Docker 엔진이 필요하며 개발 DB·비밀번호는 필요하지 않다. 최신 실행 결과는 docs/HANDOFF.md를 확인한다.
 
 이미 적용한 Flyway V1/V2는 공백·정렬을 포함해 수정하지 않는다. 스키마 변경은 새 마이그레이션으로 추가한다.
 
@@ -54,8 +54,31 @@ cd backend/home-water-monitor-backend
 
 Codex에는 이 저장소 루트를 프로젝트로 연다. [최신 인계](docs/HANDOFF.md)를 먼저 읽고 한 단계씩 이어간다.
 
-현재 재개 지점은 [측정 도메인 비교 코드와 단위 테스트](docs/NEXT_MEASUREMENT_COMPARISON.md)다. 해당 문서의 코드는 아직 작성하지 않았으며 사용자가 다음 작업에서 직접 작성한다.
+현재 재개 지점은 [측정 도메인 비교 코드와 단위 테스트](docs/NEXT_MEASUREMENT_COMPARISON.md)다. 해당 문서는 미구현 설계 자료다. 별도 기능 계획 승인 후 AI가 구현·검증한다.
 
 PC를 바꾸기 전 진행 메모와 변경 파일을 커밋·푸시하고, 이어받는 PC는 수정 전 작업 트리가 깨끗한지 확인한 뒤 `git pull --ff-only`로 갱신한다.
 
 Git 커밋·푸시는 `home-water-monitor` 루트에서 소스·인프라·문서를 함께 관리한다. Gradle 실행 위치인 `backend/home-water-monitor-backend`와 구분한다.
+
+## 단일 에이전트 하네스
+
+[AGENTS.md](AGENTS.md)와 [Harness.md](docs/Harness.md)를 따른다.
+사용자는 목표와 주요 설계를 승인하고 AI는 승인 범위의 구현·검증·기록을 수행한다.
+커밋·푸시·운영 배포는 별도 승인 대상이다.
+
+JDK 25를 설치하고 JAVA_HOME과 PATH를 해당 JDK로 설정한다.
+IntelliJ의 Project SDK와 Gradle JVM도 25로 맞춘다. 빌드는 이미 Java 25 toolchain을 사용한다.
+
+```powershell
+# 저장소 루트: DB 없는 도메인 단위 테스트
+./scripts/verify.ps1 -Mode Unit
+# Docker 엔진 실행 후: 전체 테스트와 패키징
+./scripts/verify.ps1 -Mode Full
+```
+
+스크립트는 실패 종료 코드를 전파한다. Linux/macOS에서는 PowerShell(pwsh)이 필요하다.
+GitHub Actions도 JDK 25에서 같은 Full 검증을 수행하고 테스트 보고서를 업로드한다.
+CI 원격 실행 결과와 브랜치 보호는 별도 확인 대상이다.
+Lint·정적 분석·아키텍처 자동 검사는 현재 MISSING이며 기본 check에 포함되지 않는다.
+
+브랜치·커밋·푸시 승인과 CI 확인 절차는 [Git 작업 전략](docs/GIT_WORKFLOW.md)을 따른다.

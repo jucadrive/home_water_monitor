@@ -1,17 +1,44 @@
-# Home Water Monitor 인계 — 2026-10-20
+# Home Water Monitor 인계 — 2026-10-21
 
-## 읽는 순서와 협업 방식
+## 운영 방식과 현재 작업
+- 최상위 프로젝트 실행 지침: [루트 AGENTS.md](../AGENTS.md), [Harness.md](Harness.md).
+- 사용자: Architect & Verifier. AI: 하위 에이전트 없는 단일 자율 구현·검증 담당.
+- 최초 계획 승인 후 승인 범위의 Phase를 순차 진행한다. 최종 사용자 승인 전 DONE으로 표시하지 않는다.
+- 기존 페어 프로그래밍·사용자 직접 작성 지침은 종료했다. 기존 업무 합의는 유지한다.
+- 하네스 최소 구축 계획 1~5항 및 관련 문서 전환은 사용자가 승인했다.
+- 구축 명세: [tasks/HARNESS_BOOTSTRAP.md](tasks/HARNESS_BOOTSTRAP.md).
+- 현재 상태: DONE (2026-10-21 사용자 최종 리뷰·승인 완료). 아래 최신 검증 기록은 이번 구축 결과이며 이후 절의 과거 검증과 구분한다.
+- 사용자 지시로 하네스 변경 커밋·브랜치 전략 추가를 승인받았다. 푸시는 대상 커밋 제시 후 별도 승인받는다.
 
-1. 이 파일: 최신 구현 상태, 환경 재현, 바로 다음 단계
-2. [AGENTS.md](AGENTS.md): 학습 모드와 프로젝트 배경
-3. [상세 명세](HOME_WATER_MONITOR_CODEX_SPEC_PAIR_PROGRAMMING.md): 업무 규칙과 참고 설계
-4. [백엔드 설계 요약](BACKEND_DESIGN_SUMMARY.md): 상태표·계약 후보·첫 저장 기능의 목표
-5. [다음 작업 코드](NEXT_MEASUREMENT_COMPARISON.md): 아직 작성하지 않은 측정 도메인 비교 코드와 단위 테스트
+## 최신 검증 기록
+### Phase Result — 하네스 구축
+- 구현 내용: 단일 에이전트 운영 문서, 컨텍스트 테스트 DB 격리, Unit/Full 검증 스크립트, CI 구성.
+- 변경 파일: 루트 AGENTS.md·README.md, docs 운영·설계 안내·구축 명세,
+  HomeWaterMonitorBackendApplicationTests.java, scripts/verify.ps1, .github/workflows/verify.yml.
+- 실행 환경: JAVA_HOME을 설치된 C:/dev/jdk-25.0.4+7로 지정한 검증 프로세스.
+  build.gradle은 원래 Java 25 toolchain이므로 변경하지 않았다. IDE 개인 설정도 수정하지 않았다.
+- 검증 명령: ./scripts/verify.ps1 -Mode Unit — PASS, 종료 코드 0, 도메인 테스트 7개.
+- 검증 명령: ./scripts/verify.ps1 -Mode Full — PASS, 종료 코드 0, build 성공.
+- 전체 테스트 XML: 2026-10-21 15:49~15:50 KST 새 실행. 단위 7개·컨텍스트 1개·저장 통합 3개,
+  총 11개, 실패 0·오류 0·건너뜀 0. compileTestJava와 test는 이번 검증에서 실행됐고
+  compileJava는 기존 출력에 대해 UP-TO-DATE였다. Full에서 bootJar·jar도 실행됐다.
+- 스크립트 PowerShell 구문 검사·git diff --check: PASS.
+- 실패 처리 확인: 최초 샌드박스 실행에서 Gradle 캐시 잠금 접근 거부로 스크립트 종료 코드 1 확인.
+  명령 승인을 받은 후 같은 Unit 검증 성공. 검사 비활성화·테스트 약화는 하지 않았다.
+- Docker 조회는 일반 샌드박스에서 연결 불가/접근 거부였으나 승인된 Full 프로세스는
+  Testcontainers PostgreSQL에서 컨텍스트·저장 통합 테스트를 실제 통과했다.
+- 인수 조건: 로컬 구축 조건 충족. AGENTS.md 98줄. 개발 DB 설정 없이 테스트 전용 DB 사용.
+- 남은 위험: Linux에서의 스크립트 실행·GitHub Actions 원격 실행은 NOT VERIFIED.
+  CI가 작성됐다고 브랜치 보호·필수 검사 또는 원격 성공이 설정됐다고 주장하지 않는다.
+  Lint·정적 분석·아키텍처 자동 검사 MISSING은 승인된 후속 과제다.
+- Git 상태: main, 기존 사용자 docs/Harness.md는 AM 그대로 유지. 나머지 변경은 unstaged/untracked.
+  애플리케이션 기능·의존성·V1/V2·DB 계약 변경, 커밋·푸시는 없음.
+- 커밋 초안: chore: establish single-agent harness and isolated verification
+- 다음 Phase: 사용자 최종 리뷰 DONE. IntelliJ 백엔드 프로젝트 JDK 25 설정 완료를 사용자 확인했다.
+  하네스 브랜치에서 승인된 커밋을 수행하고, 푸시 승인 후 원격 CI 결과를 확인한다.
 
-진행 상태는 이 파일과 실제 소스를 우선한다. 과거 명세의 예시 DDL·코드를 현재 구현으로 간주하지 않는다. 사용자가 직접 작성·실행하며 **파일 위치 → 해당 작성 단위의 전체 코드 → 각 부분의 의미 → 실행 결과 읽기** 순서로 안내한다. 모든 제시 코드에 간단한 주석을 반드시 넣고 코드 아래에서도 설명한다. 이미 결정한 사항을 다시 퀴즈로 묻지 않는다. 요청 없는 기능 구현·파일 수정·테스트 실행·커밋·푸시는 하지 않는다.
-
-**현재 중단 지점:** 정상 신규 세션 저장과 통합 테스트 3개까지 사용자가 작성·통과 보고했다. 원본 네 필드를 모두 비교하는 정책을 채택했고 도메인 코드·테스트를 대화에서 안내했지만, 사용자는 다음 작업일에 노트북에서 직접 작성하기로 했다. **`TdsMeasurement`, `TdsMeasurementComparisonResult`, `TdsMeasurementTest`는 아직 소스에 없다.** 다음 대화는 [동일한 주석 포함 코드](NEXT_MEASUREMENT_COMPARISON.md)를 기준으로 이 세 파일 작성부터 재개한다.
-
+## 구현 이력 읽기
+아래 2026-10-20 구현·설계 이력은 현재 소스와 대조한다. 과거 사용자 통과 보고를 이번 재실행으로 해석하지 않는다.
 ## 현재 환경과 구조
 
 - Git / Codex 프로젝트 루트: `home-water-monitor`
@@ -37,11 +64,11 @@
 | 저장 어댑터 | `TdsSessionPersistenceAdapter.insert()`에서 `EntityManager.persist()` 사용. `MANDATORY`로 바깥 서비스 트랜잭션 요구 |
 | 입력 객체·서비스 | `SaveNormalTdsSessionCommand`, `SaveNormalTdsSessionService` 작성. 신규 정상 목록 검증·안정화 제외 통계·세션과 원본 원자적 저장 |
 | 저장 통합 테스트 | `SaveNormalTdsSessionServiceIntegrationTest`에 3개 작성. 사용자가 각 테스트 통과 보고. Testcontainers PostgreSQL 18 사용, 테스트에 `@Transactional` 없음 |
-| 최신 실행 보고서 | 이번 읽기 전용 확인에서 XML은 커밋 실패 테스트 1개·실패 0·오류 0을 담고 있음. 클래스 전체 3개나 전체 테스트 스위트의 최신 실행 보고서로 확대 해석하지 않음 |
+| 최신 실행 보고서 | 2026-10-21 하네스 검증에서 전체 11개 성공. 상세 증거는 상단 최신 검증 기록 |
 | 원본 비교 도메인 | 네 필드 비교 정책 채택, 코드 안내까지 완료. 실제 소스 3개 작성·테스트 실행은 다음 작업 |
 | Git | 모노레포 루트 `.git` 한 개, `main`이 `origin/main` 추적. 원격은 `https://github.com/jucadrive/home_water_monitor`. 커밋·푸시 결과는 실제 Git 상태로 확인 |
 
-이번 요청에서는 문서 최신화와 현재 변경의 Git 공유만 수행한다. 애플리케이션 기능 추가와 테스트 재실행은 하지 않는다.
+2026-10-20 기록은 이전 문서·Git 공유 작업 범위다. 2026-10-21 하네스 작업에서는 승인된 테스트 격리·검증을 수행했다.
 
 ## 첫 저장 기능의 실제 범위와 검증
 
@@ -99,18 +126,18 @@
 ./gradlew.bat test --tests "com.juca.homewatermonitorbackend.session.application.SaveNormalTdsSessionServiceIntegrationTest"
 ```
 
-전체 `test`에는 기존 `HomeWaterMonitorBackendApplicationTests.contextLoads()`도 포함된다. 그 테스트에는 Testcontainers 연결이 없으므로 별도로 개발 DB·환경변수가 필요하다. 현재 통합 테스트의 성공을 전체 테스트 스위트 성공으로 표현하지 않는다.
+전체 test의 contextLoads도 이번 하네스에서 Testcontainers 연결을 적용했다. 개발 DB 환경변수는 필요하지 않으며 Docker 엔진이 필요하다. 전체 실행 결과는 상단 최신 검증 기록을 따른다.
 
-## 바로 다음 단계
+## 다음 작업
 
-1. 노트북 저장소 루트에서 `git status`로 로컬 변경을 확인하고, 깨끗하면 `git pull --ff-only`로 `main`을 갱신한다. 충돌·로컬 변경이 있으면 임의로 지우거나 덮어쓰지 않는다.
-2. 이 문서와 [다음 작업 코드](NEXT_MEASUREMENT_COMPARISON.md)를 읽고 세 비교 파일이 아직 없는지 실제 소스와 확인한다.
-3. 해당 문서의 enum → 도메인 record → 단위 테스트 전체 코드를 주석·설명과 함께 안내한다. 사용자가 직접 작성한다. 이전 저장 서비스와 통합 테스트를 다시 작성시키지 않는다.
-4. 사용자가 `TdsMeasurementTest`만 실행해 6개 통과를 확인한다. 이 테스트에는 Spring·DB·Docker가 필요 없다.
-5. 이후 진단 기록의 정보와 메시지/샘플 단위, 카운터 정의를 함께 정하고 새 마이그레이션·서비스 연결로 진행한다. 세션 메타데이터 변경 비교·동시성은 별도 검토한다.
+1. 하네스 DONE. [Git 전략](GIT_WORKFLOW.md)에 따라 체크포인트 커밋·푸시 승인 및 원격 CI 확인을 진행한다.
+2. 이후 측정 도메인 비교 기능의 계획·인수 조건을 제시하고 최초 승인을 받는다.
+3. 승인된 범위에서 단일 에이전트가 구현·검증한다. 미정 진단 저장·동시성 정책은 별도 검토한다.
 
-전체 DDD·모니터링·MQTT 계약을 다시 완성하느라 이 첫 저장 기능을 지연시키지 않는다. 기존에 합의한 중복/충돌·원자성·불완전 보존·재전송 정책은 상세 문서에서 이어받는다.
-
-## 노트북 Codex에 전달할 시작 문구
-
-> 루트 AGENTS.md와 docs/HANDOFF.md를 먼저 읽고 안내된 상세 명세·설계 요약·docs/NEXT_MEASUREMENT_COMPARISON.md도 읽어줘. 정상 세션 저장과 통합 테스트 3개는 이미 작성·통과 보고했고, 다음 도메인 비교 파일 3개는 아직 작성하지 않았어. 네 필드 전체 비교는 선택을 마쳤으니 다시 묻지 말고, NEXT_MEASUREMENT_COMPARISON.md의 주석 포함 전체 코드부터 같은 순서로 안내해줘. 나는 직접 코드를 작성·실행할 테니 요청 없는 소스 수정이나 테스트 실행은 하지 마.
+## Git 체크포인트 — 2026-10-21
+- 하네스 사용자 최종 승인: DONE.
+- 승인된 후속 범위: docs/GIT_WORKFLOW.md 추가, 승인 경계·브랜치 정책 안내, 하네스 변경 커밋.
+- 브랜치: codex/harness-bootstrap. main으로의 직접 통합은 하지 않는다.
+- 커밋 메시지: chore: establish single-agent harness and verification workflow.
+- 이번 추가 변경은 문서뿐이며 기존 전체 11개 테스트 성공 결과를 재사용한다.
+- 푸시·PR 생성·병합은 별도 승인 대기. 원격 CI는 아직 NOT VERIFIED.
