@@ -10,7 +10,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 // DB 없이 신규/재수신 공통 검증의 경계와 거절 조건을 확인한다.
 class NormalTdsSessionInputValidatorTest {
-    private final NormalTdsSessionInputValidator validator = new NormalTdsSessionInputValidator();
+    private final NormalTdsSessionInputValidator validator = new NormalTdsSessionInputValidator(new TdsSessionInputValidator());
 
     @Test
     void acceptsValidPrecisionAndAllWarmupForComparison() {

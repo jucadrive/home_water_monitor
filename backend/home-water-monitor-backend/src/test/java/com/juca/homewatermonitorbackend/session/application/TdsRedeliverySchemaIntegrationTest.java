@@ -7,12 +7,13 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-// V3의 실제 PostgreSQL 제약을 우회 입력으로 검증한다. 단순 JPA 매핑 성공만 확인하지 않는다.
+// V3/V4의 실제 PostgreSQL 제약을 우회 입력으로 검증한다.
 class TdsRedeliverySchemaIntegrationTest extends RedeliveryIntegrationSupport {
     @Test
     void rejectsInvalidHeaderCountsAndMissingSession() {
         var c = storedCommand();
-        for (int[] counts : new int[][]{{59, 59, 0}, {60, -1, 61}, {60, 61, -1}, {60, 59, 0}}) {
+        for (int[] counts : new int[][]{{61, 61, 0}, {-1, 0, -1}, {0, 1, 0},
+                {60, -1, 61}, {60, 61, -1}, {60, 59, 0}}) {
             assertThrows(DataIntegrityViolationException.class, () -> jdbc.update("""
                     insert into tds_session_redelivery values (?, ?, now(), ?, ?, ?)
                     """, UUID.randomUUID(), c.sessionId(), counts[0], counts[1], counts[2]));

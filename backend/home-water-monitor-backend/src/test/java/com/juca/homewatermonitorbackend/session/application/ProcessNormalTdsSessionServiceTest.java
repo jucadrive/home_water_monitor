@@ -15,7 +15,7 @@ class ProcessNormalTdsSessionServiceTest {
     private final NormalTdsSessionProcessingTransactionService processing =
             mock(NormalTdsSessionProcessingTransactionService.class);
     private final ProcessNormalTdsSessionService service = new ProcessNormalTdsSessionService(
-            new NormalTdsSessionInputValidator(), processing, new TdsSessionInsertConflictClassifier());
+            new NormalTdsSessionInputValidator(new TdsSessionInputValidator()), processing, new TdsSessionInsertConflictClassifier());
 
     @Test
     void recoversOnlyOnceAfterTheFirstCallHasThrown() {
