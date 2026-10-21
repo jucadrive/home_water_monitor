@@ -8,9 +8,38 @@
 - 하네스 최소 구축 계획 1~5항 및 관련 문서 전환은 사용자가 승인했다.
 - 구축 명세: [tasks/HARNESS_BOOTSTRAP.md](tasks/HARNESS_BOOTSTRAP.md).
 - 하네스 상태: DONE. PR #1을 main의 abe4d3c로 병합했고 병합 후 원격 CI도 성공했다.
-- 현재 작업: 측정 비교 도메인 VERIFIED, 사용자 최종 리뷰 대기. 브랜치 codex/measurement-comparison. 커밋·푸시는 별도 승인 대상이다.
+- 측정 비교 도메인: 사용자 승인으로 PR #2를 main 88682a2에 병합했고 원격 CI도 성공했다.
+- 현재 작업: 정상 세션 재수신 진단 VERIFIED. 브랜치 codex/normal-session-redelivery. 사용자 최종 리뷰·커밋·푸시 승인 대기.
 
-## Phase Result — 측정 비교 도메인
+## 최신 Phase Result — 정상 세션 재수신 진단
+- 상태: VERIFIED. 승인된 Phase 1~3 구현·로컬 검증 완료, 사용자 최종 리뷰 대기.
+- 구현: V3 진단 헤더/60개 상세, 원본 스냅샷, seq별 비교, 메타데이터 거절, 공통 입력 검증,
+  READ_COMMITTED 서비스 트랜잭션과 MANDATORY persist, 세션별 비관적 잠금·대기 제한.
+- 변경 파일: 신규 Java 11개(애플리케이션/영속성), 신규 테스트·지원 Java 7개, V3, 계획 문서.
+  기존 신규 저장 서비스·세션 Repository·application.yaml 및 관련 문서 3개를 수정했다.
+- 실행: JDK 25, Gradle Wrapper, PostgreSQL 18 Testcontainers. 실제 개발 DB·V1/V2 변경 없음.
+- 검증 명령: compileJava, Phase 1 선택 test(10개), Phase 2 선택 test(수정 후 10개),
+  Phase 3 동시성 선택 test(3개), ./scripts/verify.ps1 -Mode Full.
+- 최종 결과: Full PASS, 종료 코드 0, compileJava·compileTestJava·test·bootJar·jar 실제 실행.
+  XML 시각 2026-10-21 17:47 KST, 전체 45개·실패 0·오류 0·건너뜀 0.
+- 최종 테스트 구성: 기존 24개 + 입력 검증 4개 + 재수신 서비스 7개 + 진단 롤백 3개
+  + 스키마/신규 경로 회귀 4개 + 동시성 3개 = 45개.
+- 인수 조건: 동일·순서 역전·자릿수·필드별 충돌·전압 null 양방향·전부 충돌·집계·거절·
+  DB 시각 반올림·실제 쓰기/커밋 롤백·같은 세션 대기·다른 세션 독립·timeout 후 복구 모두 충족.
+- 수정 이력: Phase 2 자동 수정 1회(미존재 세션 업무 판단을 Repository 밖 서비스로 이동).
+  테스트 삭제·약화·검사 비활성화 없음. Phase 1/3 수정 재시도 0회.
+- 자체 리뷰: 새 Java 파일 모두 200줄 이하, 순수 domain은 수정하지 않음.
+  공통 검증은 기존 기본 검증을 보존하며 신규의 통계 대상 필수 조건도 회귀 검증했다.
+  V1/V2·빌드 의존성·공개 API·MQTT·원본 저장 컬럼 변경 없음. diff/문서 점검 통과.
+- 제한: 기존 NORMAL 60개 세션 전용. 신규/기존 자동 라우팅·최초 저장 경합·불완전 보존·
+  거절/실패 사건 영속화·MQTT 확인 발행·보관/삭제 정책은 미구현이다.
+- V3는 테스트 DB에만 적용했다. 개발 DB는 서버 실행 시 Flyway로 적용할 수 있으며 이번에는 실행하지 않았다.
+- 원격 CI: NOT RUN. Lint·정적 분석·아키텍처 자동 검사는 기존 MISSING 상태다.
+- Git: codex/normal-session-redelivery, 변경 26개 파일(기존 6·신규 20), 커밋·푸시 없음.
+- 커밋 초안: feat: record normal session redelivery diagnostics atomically
+- 다음: 사용자 최종 리뷰와 커밋·푸시 승인. 재승인 전 추가 기능·PR·병합은 진행하지 않는다.
+
+## 이전 Phase Result — 측정 비교 도메인
 - 상태: VERIFIED — 2026-10-21 최초 계획 승인 범위 구현·검증 완료, 최종 사용자 리뷰 대기.
 - 구현 내용: 같은 sessionId + seq에서 네 필드의 동일·충돌 비교, 기본 입력·비교 대상 검증.
 - 변경 파일: TdsMeasurement.java, TdsMeasurementComparisonResult.java, TdsMeasurementTest.java,
@@ -84,8 +113,9 @@
 | 저장 어댑터 | `TdsSessionPersistenceAdapter.insert()`에서 `EntityManager.persist()` 사용. `MANDATORY`로 바깥 서비스 트랜잭션 요구 |
 | 입력 객체·서비스 | `SaveNormalTdsSessionCommand`, `SaveNormalTdsSessionService` 작성. 신규 정상 목록 검증·안정화 제외 통계·세션과 원본 원자적 저장 |
 | 저장 통합 테스트 | `SaveNormalTdsSessionServiceIntegrationTest`에 3개 작성. 사용자가 각 테스트 통과 보고. Testcontainers PostgreSQL 18 사용, 테스트에 `@Transactional` 없음 |
-| 최신 실행 보고서 | 측정 비교 추가 후 전체 24개 성공. 상세 증거는 상단 측정 비교 Phase Result |
-| 원본 비교 도메인 | record·enum·단위 테스트 13개 구현. 최신 검증은 상단 측정 비교 Phase Result 참고. 저장 서비스 연결은 미구현 |
+| 최신 실행 보고서 | 재수신 진단 추가 후 전체 45개 성공. 상단 최신 Phase Result 참고 |
+| 원본 비교 도메인 | PR #2 병합 완료. 이번 재수신 서비스가 순수 비교 도메인을 사용 |
+| 정상 세션 재수신 | V3·헤더/상세 스냅샷·서비스·잠금 구현. 최종 검증 결과는 상단 최신 기록 참고 |
 | Git | 모노레포 루트 `.git` 한 개, `main`이 `origin/main` 추적. 원격은 `https://github.com/jucadrive/home_water_monitor`. 커밋·푸시 결과는 실제 Git 상태로 확인 |
 
 2026-10-20 기록은 이전 문서·Git 공유 작업 범위다. 2026-10-21 하네스 작업에서는 승인된 테스트 격리·검증을 수행했다.
@@ -104,6 +134,8 @@
 
 ## 현재 DB 모델
 
+- V3가 정상 세션 재수신 헤더·샘플별 진단을 추가한다. 원본과 세션 컬럼은 유지하며 최종 DDL은 V3를 참조한다.
+
 - 실제 DDL은 `src/main/resources/db/migration/V1__create_tds_session.sql`과 `V2__create_tds_measurement.sql`이다. 오래된 명세의 참고 DDL보다 실제 마이그레이션을 기준으로 확인한다.
 - 세션: 식별·장치·시각, 기대/보존/통계 대상 건수, `NORMAL`/`INCOMPLETE` 보존 결과, 가정 온도·교정 버전, 최소/최대/평균/중앙값.
 - 원본: 내부 자동 생성 ID, 세션 UUID, seq, 경과시간, TDS, 안정화 여부, 선택 전압.
@@ -121,8 +153,8 @@
 
 ## 아직 구현하지 않은 것
 
-- 기존 원본 조회 → 도메인 비교 → 결과별 저장으로 연결하는 재수신 서비스
-- 동일 재수신/내용 충돌 진단 테이블·기록 단위·카운터·동시성 처리
+- 신규/기존 자동 라우팅과 최초 저장 경합 처리 (이번 서비스는 기존 NORMAL 60개 세션 전용)
+- 거절·롤백 사건 별도 보존, 원문 로그·운영 보관 정책, 불완전 재수신 동시성 처리
 - 불완전 세션 저장과 불완전 종료 뒤 변경·추가 목록 정책
 - 실제 MQTT 구독·장치 명령·커밋 후 보존 완료 확인·모니터링
 - 센서 연결·배선·실측·펌웨어
@@ -149,8 +181,8 @@
 
 ## 다음 작업
 
-1. 측정 비교 구현 검증 결과를 사용자에게 보고하고 최종 리뷰 및 커밋·푸시 승인을 받는다.
-2. 다음 기능 후보는 재수신 진단의 저장 단위·필드·카운터·동시성 설계이며 별도 계획 승인이 필요하다.
+1. 정상 재수신 진단 전체 검증 결과를 사용자에게 보고하고 최종 리뷰·커밋·푸시 승인을 받는다.
+2. 다음 후보는 신규/기존 라우팅·최초 저장 경합, 또는 불완전 세션 보존이다. 별도 계획 승인이 필요하다.
 3. 승인된 범위에서 단일 에이전트가 구현·검증한다. 미정 진단 저장·동시성 정책은 별도 검토한다.
 
 ## Git 체크포인트 — 2026-10-21
@@ -168,3 +200,9 @@
 - 승인 범위: 소스 3개와 문서 5개, codex/measurement-comparison 브랜치 커밋·푸시.
 - 커밋 메시지: feat: add measurement content comparison domain.
 - 푸시 후 해당 SHA의 원격 CI를 확인한다. PR 생성·main 병합은 이번 승인 범위가 아니다.
+## Git 승인 — 2026-10-21
+- 사용자가 보고된 26개 파일의 커밋·푸시 및 원격 CI 확인을 승인했다.
+- 커밋 전 변경 범위·diff와 기존 Full 45개 성공 XML을 재확인했다. 소스 추가 변경은 없다.
+- 브랜치: codex/normal-session-redelivery.
+- 커밋 메시지: feat: record normal session redelivery diagnostics atomically.
+- PR 생성·main 병합은 이번 승인 범위에 포함하지 않는다. 원격 CI 결과는 푸시 후 확인한다.

@@ -10,3 +10,8 @@ spring:
     hibernate:
       ddl-auto: validate
     open-in-view: false
+
+# 재수신 트랜잭션의 행 잠금 대기를 제한하며 DB 전역 설정은 변경하지 않는다.
+water-monitor:
+  redelivery:
+    lock-timeout-ms: 5000
