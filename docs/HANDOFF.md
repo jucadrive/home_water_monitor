@@ -1,5 +1,38 @@
 # Home Water Monitor 인계 — 2026-10-21
 
+## 현재 진행 — 신규/기존 라우팅과 최초 저장 경합
+- 기준 main: 2364c27 (PR #3 병합). 로컬 origin/main 참조도 동일했으며 작업 전 변경 없음.
+  아래 과거 PR #3 병합 대기 기록은 이 체크포인트 이전 이력이다. 이번에 최신 원격 CI는 조회하지 않았다.
+- 사용자 승인: 전체 라우팅 계획, 새 진입점의 외부 트랜잭션 금지, 세션 PK 충돌 후 1회 복구.
+- 명세: [tasks/NORMAL_SESSION_ROUTING.md](tasks/NORMAL_SESSION_ROUTING.md).
+- 브랜치: codex/normal-session-routing. 상태 DONE — 사용자 최종 리뷰 통과.
+- Phase 1: NEVER 조율·READ_COMMITTED 분기·PK 충돌 식별·새 트랜잭션 복구를 구현했다.
+- Phase 2: 실제 최초 저장 경합·상대 롤백·timeout·쓰기/커밋 실패와 최종 Full 검증 완료.
+- 로컬 CLI 기본 Java는 21이다. 검증 프로세스 JAVA_HOME=C:/dev/jdk-25.0.4.1+1을 사용한다.
+  Docker Desktop을 실행했고 Testcontainers 통합 테스트 연결을 확인했다.
+- Git 통합 승인: 사용자가 커밋·푸시·해당 SHA CI 확인 후 성공 시 PR 생성·main 병합 및 main CI 확인까지 승인했다.
+  아래 검증 기록은 Git 통합 실행 전 체크포인트다. 원격 결과는 PR/Actions의 실제 상태를 확인한다.
+
+## 최신 Phase Result — 신규/기존 라우팅과 최초 저장 경합
+- 구현: ProcessNormalTdsSessionService가 입력 검증 후 별도 READ_COMMITTED Bean으로 분기한다.
+  세션 PK 충돌만 첫 트랜잭션 종료 후 새 트랜잭션에서 기존 세션 처리로 1회 전환한다.
+  새 진입점은 NEVER이며 외부 트랜잭션에서 호출하면 거절한다. 기존 직접 서비스 계약은 유지했다.
+- 변경: 본체 Java 4·테스트/지원 Java 6·새 작업 명세, 설정 주석과 관련 문서. 총 15개 파일.
+- 검증: compileJava compileTestJava PASS, Phase 1 선택 10개 PASS,
+  Phase 2 수정 후 선택 11개 PASS, 최종 ./scripts/verify.ps1 -Mode Full PASS (종료 코드 0).
+- 최종 XML: 2026-10-21 22:52:21~22:52:55 KST, 기존 45 + 신규 21 = 66개,
+  실패 0·오류 0·건너뜀 0. test/bootJar/jar는 실제 실행, 최종 컴파일은 UP-TO-DATE.
+- 인수 조건: 정상/거절 분기·복구 제한·최초 저장 경합·상대 롤백·다른 세션 독립·
+  메타데이터 거절·INSERT timeout·신규/기존/복구 커밋 실패·이전 데이터 보존 충족.
+- 수정: Phase 2 테스트 spy stubbing이 MANDATORY 프록시를 호출한 문제 1회 수정.
+  실제 트랜잭션 규칙/테스트 기대값 변경 없음. 신규 Java 모두 200줄 이하 (최대 147줄).
+- 제한: NORMAL 60개 전용. 실패 사건 보존·불완전 세션·MQTT 수신/확인 발행은 미구현.
+  잠금별 timeout이며 전체 호출 상한이 아니다. 불명 커밋 실패를 성공으로 간주하거나 재시도하지 않는다.
+- Git: codex/normal-session-routing, staged 없음, unstaged/untracked만 존재. diff 점검 PASS.
+- 원격 CI NOT RUN. Lint·정적 분석·아키텍처 자동 검사는 MISSING.
+- 커밋 초안: feat: route normal sessions and recover initial insert races
+- 다음: 승인된 커밋·푸시·CI·PR·main 병합·main CI를 순차 실행한다. 사용자의 최종 리뷰는 통과했다.
+
 ## 운영 방식과 현재 작업
 - 최상위 프로젝트 실행 지침: [루트 AGENTS.md](../AGENTS.md), [Harness.md](Harness.md).
 - 사용자: Architect & Verifier. AI: 하위 에이전트 없는 단일 자율 구현·검증 담당.
@@ -10,16 +43,15 @@
 - 하네스 상태: DONE. PR #1을 main의 abe4d3c로 병합했고 병합 후 원격 CI도 성공했다.
 - 측정 비교 도메인: 사용자 승인으로 PR #2를 main 88682a2에 병합했고 원격 CI도 성공했다.
 - 정상 세션 재수신 진단: 구현·검증 결과를 사용자 승인받았고 커밋 5336e3e를 푸시했다. 원격 CI 성공.
-- 현재 Git 작업: 사용자 요청으로 PR #3 생성·리뷰·main 병합 진행. 최신 병합/CI 상태는 PR #3을 확인한다.
+- PR #3 병합은 로컬 main 2364c27에서 확인했다. 현재 작업은 사용자 리뷰를 통과한 라우팅 변경의 Git 통합이다.
 
 ## 데스크톱에서 이어가기 — 2026-10-21
 
-- 현재 구현: 정상 신규 저장·측정 비교·기존 NORMAL 세션 재수신 진단과 세션별 잠금까지 완료.
-- 로컬 Full 45개 성공, 소스 커밋 5336e3e의 원격 Verify 성공.
+- 현재 구현: 정상 신규 저장·측정 비교·기존 NORMAL 재수신 진단·세션별 잠금·통합 라우팅과 최초 저장 경합 처리.
+- 최신 로컬 Full 66개 성공. 소스 커밋 5336e3e의 과거 원격 Verify는 성공했으나 이번 미커밋 변경의 원격 CI는 NOT RUN.
 - PR: https://github.com/jucadrive/home_water_monitor/pull/3
-- 이 인계 문서는 PR 병합 전에 작성했다. 최종 병합 여부·SHA·최신 CI 결과는 위 PR에서 확인한다.
-- 다음 구현을 아직 승인받거나 시작하지 않았다. 추천 후보는 신규/기존 라우팅과 최초 저장 경합 처리다.
-  불완전 세션 보존·실제 MQTT 수신/확인 발행은 계속 미구현이다.
+- PR #3은 로컬 main에 병합돼 있다. 라우팅 변경은 작업 브랜치에 미커밋 상태이므로 보존한다.
+- 라우팅 구현은 승인받아 검증했다. 불완전 세션 보존·실제 MQTT 수신/확인 발행은 계속 미구현이다.
 
 데스크톱 저장소 루트에서:
 ```powershell
@@ -30,21 +62,21 @@ git switch main
 git pull --ff-only origin main
 ```
 
-1. 루트 AGENTS.md -> 이 HANDOFF -> docs/tasks/NORMAL_SESSION_REDELIVERY.md를 읽고 실제 소스와 대조한다.
+1. 루트 AGENTS.md -> 이 HANDOFF -> docs/tasks/NORMAL_SESSION_ROUTING.md 및 재수신 명세를 실제 소스와 대조한다.
 2. IntelliJ Project SDK와 Gradle JVM을 JDK 25로 맞춘다. CLI도 JAVA_HOME/PATH를 JDK 25로 설정한다.
 3. Docker Desktop을 실행한다. 테스트는 Testcontainers를 사용하므로 개발 DB/.env 설정이 필요 없다.
 4. PC 변경 후 재현 검증이 필요하면 저장소 루트에서 ./scripts/verify.ps1 -Mode Full을 실행한다.
 5. V3는 개발 DB에 아직 적용하지 않았다. 서버를 시작하면 Flyway가 적용하므로 정상 접속 DB를 확인한다.
    기존 V1/V2와 데이터 볼륨을 수정·삭제하지 않는다. 실제 .env·DB 데이터·IDE 개인 설정은 Git으로 공유되지 않는다.
-6. 기존 신규 SaveNormalTdsSessionService와 재수신 ProcessNormalTdsSessionRedeliveryService는 별도 진입점이다.
-   신규/기존을 자동 분기하거나 MQTT로 연결했다고 가정하지 않는다.
+6. 통합 진입점은 ProcessNormalTdsSessionService.process()다. 외부 트랜잭션 없이 호출한다.
+   기존 신규/재수신 직접 서비스는 유지했다. 실제 MQTT로는 아직 연결하지 않았다.
 7. 새 요구사항에서는 실행 계획과 최초 승인을 먼저 받고, 커밋·푸시·PR·병합도 합의한 승인을 따른다.
 
 재개 문구:
-> AGENTS.md와 HANDOFF.md, NORMAL_SESSION_REDELIVERY.md 및 현재 main 소스를 확인해 줘.
-> 정상 신규 저장·측정 비교·정상 세션 재수신 진단은 구현했고 45개 테스트와 원격 CI를 통과했어.
-> 다음은 신규/기존 라우팅·최초 저장 경합 처리의 계획을 준비하자. 아직 구현하지 말고 승인부터 받아줘.
-## 최신 Phase Result — 정상 세션 재수신 진단
+> AGENTS.md와 HANDOFF.md, NORMAL_SESSION_ROUTING.md 및 현재 작업 브랜치 소스를 확인해 줘.
+> 신규/기존 라우팅과 최초 저장 경합 처리까지 구현했고 로컬 Full 66개를 통과했어.
+> 미커밋 변경을 보존하고 결과를 리뷰해 줘. 커밋·푸시·PR·병합은 별도 승인 전 진행하지 마.
+## 이전 Phase Result — 정상 세션 재수신 진단
 - 상태: VERIFIED. 승인된 Phase 1~3 구현·로컬 검증 완료, 사용자 최종 리뷰 대기.
 - 구현: V3 진단 헤더/60개 상세, 원본 스냅샷, seq별 비교, 메타데이터 거절, 공통 입력 검증,
   READ_COMMITTED 서비스 트랜잭션과 MANDATORY persist, 세션별 비관적 잠금·대기 제한.
@@ -164,7 +196,8 @@ git pull --ff-only origin main
 - 개발 DB와 테스트 DB는 별개다. Testcontainers 2.0.5의 `org.testcontainers.postgresql.PostgreSQLContainer` 및 `@DynamicPropertySource`로 테스트 전용 접속 정보를 등록한다. Docker Desktop은 필요하지만 이 테스트에 개발 DB 환경변수는 필요하지 않다.
 - 수동 UUID를 가진 세션의 기본 `JpaRepository.save()`는 `merge()`를 선택할 수 있어 신규 저장에서는 `persist()` 경로를 사용했다. 기존 세션 ID의 재전송은 아직 제약 위반 오류 경로이며, 이를 최종 멱등성 구현으로 간주하지 않는다.
 - 현재 정상 경로의 59개 목록 거절은 최종 불완전 보존 정책이 아니다. 불완전 원본 보존과 정상 추세 제외는 이후 구현할 합의다.
-- 실제 MQTT 확인 발행, 진단·카운터, 재전송·동시성 처리는 아직 없다. 커밋 명시 거절 테스트가 모든 네트워크 장애와 커밋 결과 불명 상황까지 검증한 것은 아니다.
+- 정상 세션 진단·재수신·통합 라우팅·최초 저장 경합은 위 최신 구현을 따른다. 실제 MQTT 확인 발행은 없다.
+  커밋 명시 거절 테스트가 모든 네트워크 장애와 커밋 결과 불명 상황까지 검증한 것은 아니다.
 
 ## 현재 DB 모델
 
@@ -187,7 +220,7 @@ git pull --ff-only origin main
 
 ## 아직 구현하지 않은 것
 
-- 신규/기존 자동 라우팅과 최초 저장 경합 처리 (이번 서비스는 기존 NORMAL 60개 세션 전용)
+- 정상 범위를 넘어선 불완전 세션 라우팅·경합 처리 (현재 통합 진입점은 NORMAL 60개 목록 전용)
 - 거절·롤백 사건 별도 보존, 원문 로그·운영 보관 정책, 불완전 재수신 동시성 처리
 - 불완전 세션 저장과 불완전 종료 뒤 변경·추가 목록 정책
 - 실제 MQTT 구독·장치 명령·커밋 후 보존 완료 확인·모니터링
@@ -215,9 +248,9 @@ git pull --ff-only origin main
 
 ## 다음 작업
 
-1. 재수신 구현·로컬 45개·원격 CI 검증 완료. PR #3 main 병합 작업을 마치고 데스크톱에서 최신 main을 받는다.
-2. 다음 후보는 신규/기존 라우팅·최초 저장 경합, 또는 불완전 세션 보존이다. 별도 계획 승인이 필요하다.
-3. 승인된 범위에서 단일 에이전트가 구현·검증한다. 미정 진단 저장·동시성 정책은 별도 검토한다.
+1. 라우팅 구현·로컬 66개 검증 결과를 사용자 최종 리뷰한다. Git 작업은 별도 승인 후 진행한다.
+2. 다음 기능 후보는 불완전 세션 보존 또는 실제 입력 어댑터다. 별도 계획 승인이 필요하다.
+3. 미정 입력/실패 진단·MQTT 확인 발행 계약은 해당 기능의 계획에서 검토한다.
 
 ## Git 체크포인트 — 2026-10-21
 - 하네스 사용자 최종 승인: DONE.
