@@ -32,4 +32,7 @@
 ## 현재 체크포인트
 - 사용자 승인: 2026-10-21 하네스 최종 DONE, 하네스 변경 커밋 및 브랜치 전략 추가.
 - 커밋 메시지: `chore: establish single-agent harness and verification workflow`.
-- 푸시·PR·병합은 별도 승인 대기다.
+- 푸시·PR 생성·리뷰 후 병합을 사용자 승인받아 완료했다. PR #1, main 병합 커밋 abe4d3c.
+
+- 하네스 병합 후 main CI 성공: https://github.com/jucadrive/home_water_monitor/actions/runs/39563945349
+- 이후 새 작업의 커밋·푸시·PR·병합 승인은 별도로 받는다.

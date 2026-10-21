@@ -7,10 +7,30 @@
 - 기존 페어 프로그래밍·사용자 직접 작성 지침은 종료했다. 기존 업무 합의는 유지한다.
 - 하네스 최소 구축 계획 1~5항 및 관련 문서 전환은 사용자가 승인했다.
 - 구축 명세: [tasks/HARNESS_BOOTSTRAP.md](tasks/HARNESS_BOOTSTRAP.md).
-- 현재 상태: DONE (2026-10-21 사용자 최종 리뷰·승인 완료). 아래 최신 검증 기록은 이번 구축 결과이며 이후 절의 과거 검증과 구분한다.
-- 사용자 지시로 하네스 변경 커밋·브랜치 전략 추가를 승인받았다. 푸시는 대상 커밋 제시 후 별도 승인받는다.
+- 하네스 상태: DONE. PR #1을 main의 abe4d3c로 병합했고 병합 후 원격 CI도 성공했다.
+- 현재 작업: 측정 비교 도메인 VERIFIED, 사용자 최종 리뷰 대기. 브랜치 codex/measurement-comparison. 커밋·푸시는 별도 승인 대상이다.
 
-## 최신 검증 기록
+## Phase Result — 측정 비교 도메인
+- 상태: VERIFIED — 2026-10-21 최초 계획 승인 범위 구현·검증 완료, 최종 사용자 리뷰 대기.
+- 구현 내용: 같은 sessionId + seq에서 네 필드의 동일·충돌 비교, 기본 입력·비교 대상 검증.
+- 변경 파일: TdsMeasurement.java, TdsMeasurementComparisonResult.java, TdsMeasurementTest.java,
+  작업 명세·HANDOFF·도메인 안내·하네스/Git 체크포인트 문서. 서비스·DB·의존성 변경 없음.
+- 검증 명령: ./scripts/verify.ps1 -Mode Unit — PASS, 종료 코드 0, 비교 13개 + 통계 7개.
+- 검증 명령: ./scripts/verify.ps1 -Mode Full — PASS, 종료 코드 0, 전체 build 성공.
+- XML 증거: 2026-10-21 16:56 KST 새 실행. 비교 13개·통계 7개·컨텍스트 1개·저장 통합 3개,
+  전체 24개, 실패 0·오류 0·건너뜀 0. JDK 25 사용. Unit에서 compileJava·compileTestJava 실행,
+  Full에서 test·bootJar·jar 실행. 기존 쓰기/커밋 오류 롤백 테스트도 통과했다.
+- 인수 조건: 동일·필드별 충돌·자릿수·전압 null 양방향·다른 키·필수값·순번·경과시간·경계·
+  반올림 금지·원본 수치 보존 및 전체 회귀 검증 충족.
+- 자체 리뷰: 도메인 import는 java.math/java.util뿐, 신규 Java 파일은 각각 50/7/133줄.
+  git diff --check 및 변경 범위 검토 통과. 자동 수정 재시도 0회.
+- 남은 위험: record의 equals/hashCode는 업무 비교가 아니다. 서비스 연결·재수신 저장·진단·동시성은 미구현.
+  이번 브랜치의 원격 CI는 NOT RUN이며 Lint·정적 분석·아키텍처 자동 검사는 기존 MISSING 상태다.
+- Git 상태: codex/measurement-comparison, 소스 3개 신규·계획 1개 신규·문서 4개 수정.
+  커밋·푸시·PR·병합은 하지 않았다.
+- 커밋 초안: feat: add measurement content comparison domain
+- 다음 Phase: 사용자 최종 리뷰 및 구체적인 변경 범위의 커밋·푸시 승인 대기.
+## 하네스 구축 당시 검증 기록
 ### Phase Result — 하네스 구축
 - 구현 내용: 단일 에이전트 운영 문서, 컨텍스트 테스트 DB 격리, Unit/Full 검증 스크립트, CI 구성.
 - 변경 파일: 루트 AGENTS.md·README.md, docs 운영·설계 안내·구축 명세,
@@ -28,7 +48,7 @@
 - Docker 조회는 일반 샌드박스에서 연결 불가/접근 거부였으나 승인된 Full 프로세스는
   Testcontainers PostgreSQL에서 컨텍스트·저장 통합 테스트를 실제 통과했다.
 - 인수 조건: 로컬 구축 조건 충족. AGENTS.md 98줄. 개발 DB 설정 없이 테스트 전용 DB 사용.
-- 남은 위험: Linux에서의 스크립트 실행·GitHub Actions 원격 실행은 NOT VERIFIED.
+- 당시 미확인: Linux·원격 CI. 이후 PR #1과 main CI에서 동일 스크립트 Full 실행 성공으로 확인했다.
   CI가 작성됐다고 브랜치 보호·필수 검사 또는 원격 성공이 설정됐다고 주장하지 않는다.
   Lint·정적 분석·아키텍처 자동 검사 MISSING은 승인된 후속 과제다.
 - Git 상태: main, 기존 사용자 docs/Harness.md는 AM 그대로 유지. 나머지 변경은 unstaged/untracked.
@@ -64,8 +84,8 @@
 | 저장 어댑터 | `TdsSessionPersistenceAdapter.insert()`에서 `EntityManager.persist()` 사용. `MANDATORY`로 바깥 서비스 트랜잭션 요구 |
 | 입력 객체·서비스 | `SaveNormalTdsSessionCommand`, `SaveNormalTdsSessionService` 작성. 신규 정상 목록 검증·안정화 제외 통계·세션과 원본 원자적 저장 |
 | 저장 통합 테스트 | `SaveNormalTdsSessionServiceIntegrationTest`에 3개 작성. 사용자가 각 테스트 통과 보고. Testcontainers PostgreSQL 18 사용, 테스트에 `@Transactional` 없음 |
-| 최신 실행 보고서 | 2026-10-21 하네스 검증에서 전체 11개 성공. 상세 증거는 상단 최신 검증 기록 |
-| 원본 비교 도메인 | 네 필드 비교 정책 채택, 코드 안내까지 완료. 실제 소스 3개 작성·테스트 실행은 다음 작업 |
+| 최신 실행 보고서 | 측정 비교 추가 후 전체 24개 성공. 상세 증거는 상단 측정 비교 Phase Result |
+| 원본 비교 도메인 | record·enum·단위 테스트 13개 구현. 최신 검증은 상단 측정 비교 Phase Result 참고. 저장 서비스 연결은 미구현 |
 | Git | 모노레포 루트 `.git` 한 개, `main`이 `origin/main` 추적. 원격은 `https://github.com/jucadrive/home_water_monitor`. 커밋·푸시 결과는 실제 Git 상태로 확인 |
 
 2026-10-20 기록은 이전 문서·Git 공유 작업 범위다. 2026-10-21 하네스 작업에서는 승인된 테스트 격리·검증을 수행했다.
@@ -97,11 +117,10 @@
 - 수치는 `BigDecimal.compareTo()`로 비교하여 `151.3`과 `151.30`을 동일하게 본다. 이 비교에서 반올림하거나 허용 오차를 추가하지 않는다.
 - 전압은 양쪽 모두 `null`이면 동일, 한쪽만 `null`이면 충돌이다.
 - 안내한 도메인 설계: 결과 enum `IDENTICAL`/`CONFLICT`, 측정 record의 `compareWith()`. 다른 세션·seq 비교는 `IllegalArgumentException`. 신규 여부는 서비스 조회 결과로 판정한다.
-- 위 세부 코드와 단위 테스트 6개는 [다음 작업 문서](NEXT_MEASUREMENT_COMPARISON.md)의 **미작성 안내 코드**다. 아직 실행 검증한 구현이 아니다.
+- record·enum과 비교 단위 테스트 13개를 구현했다. [도메인 안내](NEXT_MEASUREMENT_COMPARISON.md)는 실제 소스를 참조하며 검증 증거는 상단에 기록한다.
 
 ## 아직 구현하지 않은 것
 
-- `TdsMeasurement`, `TdsMeasurementComparisonResult`, `TdsMeasurementTest` 실제 파일 작성과 비교 테스트 실행
 - 기존 원본 조회 → 도메인 비교 → 결과별 저장으로 연결하는 재수신 서비스
 - 동일 재수신/내용 충돌 진단 테이블·기록 단위·카운터·동시성 처리
 - 불완전 세션 저장과 불완전 종료 뒤 변경·추가 목록 정책
@@ -130,8 +149,8 @@
 
 ## 다음 작업
 
-1. 하네스 DONE. [Git 전략](GIT_WORKFLOW.md)에 따라 체크포인트 커밋·푸시 승인 및 원격 CI 확인을 진행한다.
-2. 이후 측정 도메인 비교 기능의 계획·인수 조건을 제시하고 최초 승인을 받는다.
+1. 측정 비교 구현 검증 결과를 사용자에게 보고하고 최종 리뷰 및 커밋·푸시 승인을 받는다.
+2. 다음 기능 후보는 재수신 진단의 저장 단위·필드·카운터·동시성 설계이며 별도 계획 승인이 필요하다.
 3. 승인된 범위에서 단일 에이전트가 구현·검증한다. 미정 진단 저장·동시성 정책은 별도 검토한다.
 
 ## Git 체크포인트 — 2026-10-21
@@ -140,4 +159,12 @@
 - 브랜치: codex/harness-bootstrap. main으로의 직접 통합은 하지 않는다.
 - 커밋 메시지: chore: establish single-agent harness and verification workflow.
 - 이번 추가 변경은 문서뿐이며 기존 전체 11개 테스트 성공 결과를 재사용한다.
-- 푸시·PR 생성·병합은 별도 승인 대기. 원격 CI는 아직 NOT VERIFIED.
+- 하네스 후속 승인과 푸시·PR #1·리뷰·main 병합 완료. 원격 main CI 성공: https://github.com/jucadrive/home_water_monitor/actions/runs/39563945349
+## Git 체크포인트 승인 — 2026-10-21
+- 사용자가 의도한 동작 확인을 조건으로 이번 변경의 커밋·푸시를 승인했다.
+- 커밋 전 코드 리뷰에서 계획된 비교 정책과의 불일치를 발견하지 못했다.
+- 기존 Full 24개 통과 기록과 이후 비교 테스트 13개 성공 XML을 확인했다.
+  최신 XML은 비교 클래스 단독 실행 기록이며 전체 스위트 재실행으로 해석하지 않는다.
+- 승인 범위: 소스 3개와 문서 5개, codex/measurement-comparison 브랜치 커밋·푸시.
+- 커밋 메시지: feat: add measurement content comparison domain.
+- 푸시 후 해당 SHA의 원격 CI를 확인한다. PR 생성·main 병합은 이번 승인 범위가 아니다.
