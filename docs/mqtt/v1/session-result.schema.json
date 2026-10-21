@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:home-water-monitor:mqtt:v1:session-result",
+  "title": "SESSION_RESULT v1 payload",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "eventType", "deviceId", "sessionId", "startedAt", "expectedSamples", "samplingIntervalMs", "temperatureAssumedC", "calibrationVersion", "measurements"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "eventType": { "const": "SESSION_RESULT" },
+    "deviceId": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$" },
+    "sessionId": { "type": "string", "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$" },
+    "startedAt": {
+      "oneOf": [
+        { "type": "null" },
+        { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,9})?Z$" }
+      ]
+    },
+    "expectedSamples": { "type": "integer", "const": 60 },
+    "samplingIntervalMs": { "type": "integer", "const": 1000 },
+    "temperatureAssumedC": { "type": "number", "exclusiveMinimum": -1000, "exclusiveMaximum": 1000, "multipleOf": 0.01 },
+    "calibrationVersion": {
+      "type": "string", "minLength": 1, "maxLength": 64,
+      "allOf": [{ "pattern": "\\S" }, { "pattern": "^[^\\u0000-\\u001F\\u007F]*$" }]
+    },
+    "measurements": {
+      "type": "array", "minItems": 0, "maxItems": 60,
+      "items": { "$ref": "#/$defs/measurement" }
+    }
+  },
+  "$defs": {
+    "measurement": {
+      "type": "object", "additionalProperties": false,
+      "required": ["seq", "elapsedMs", "tdsPpm", "isWarmup", "rawVoltageMv"],
+      "properties": {
+        "seq": { "type": "integer", "minimum": 1, "maximum": 60 },
+        "elapsedMs": { "type": "integer", "minimum": 0, "maximum": 2147483647 },
+        "tdsPpm": { "$ref": "#/$defs/measurementNumber" },
+        "isWarmup": { "type": "boolean" },
+        "rawVoltageMv": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/measurementNumber" }] }
+      }
+    },
+    "measurementNumber": { "type": "number", "exclusiveMinimum": -10000000, "exclusiveMaximum": 10000000, "multipleOf": 0.01 }
+  }
+}

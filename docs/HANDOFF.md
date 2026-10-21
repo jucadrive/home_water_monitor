@@ -1,6 +1,62 @@
 # Home Water Monitor 인계 — 2026-10-22
 
-## 현재 진행 — 불완전 세션 보존
+## 현재 진행 — MQTT 5.0 실제 서버 연동
+- 상태 DONE, 2026-10-22 사용자 최종 리뷰 승인. [작업 명세](tasks/MQTT_INTEGRATION.md) · [실행 안내](MQTT_INTEGRATION.md).
+- 사용자가 커밋·푸시·소스 CI·PR·main 병합·병합 후 CI 및 로컬 동기화를 승인했다.
+  아래 Git/원격 CI 기록은 실행 전 체크포인트다. 실제 결과는 GitHub PR/Actions와 Git 로그를 확인한다.
+- 2026-10-22 사용자가 전체 MQTT 구현 계획을 승인했다. Phase 1~3 순차 구현·검증 완료.
+- MQTT 수신 → strict 계약 검증 → 기존 application 저장 → 실제 커밋 성공 후 보존 확인 발행을 구현했다.
+- 브랜치 codex/mqtt-message-contract, 기준 main 810ed9a. 기존 미커밋 계약 변경을 보존했다.
+- 기본 MQTT_ENABLED=false. 장비/운영 브로커/개발 DB는 실행하지 않았다. 테스트 브로커/DB/모의 장치만 사용했다.
+
+## 최신 Phase Result — MQTT 서버 연동
+- 본체: session.infrastructure.mqtt의 codec·수신기·설정·발행기 5개. 테스트/지원 Java 6개.
+  Paho v5 1.2.5 의존성, 외부 MQTT 설정, 연동 안내·승인/검증 기록을 추가했다.
+- 저장은 ProcessTdsSessionService 프록시를 호출한다. 기존 NEVER/READ_COMMITTED·PK 충돌 1회 복구를 유지했다.
+  실제 커밋 성공 후만 확인한다. 실패 시 MQTT ACK하되 업무 확인은 없고 장치 원본 재전송으로 복구한다.
+- 수신/발행 연결 분리·Receive Maximum=1·DirectChannel 직렬 처리. 유한 연결/발행 대기와 재연결·세션 정책은 실행 안내 참조.
+- 검증: 선택 Phase 1 33개, Phase 2 구성 9개 및 브로커/DB 통합 10개 PASS.
+  최종 ./scripts/verify-mqtt-contract.ps1 108개 PASS·실패/건너뜀 0·종료 코드 0.
+- 최종 ./scripts/verify.ps1 -Mode Full PASS, 종료 코드 0, 기존 97 + 신규 61 = 158개,
+  26개 클래스·실패/오류/건너뜀 0. XML KST 2026-10-22 00:58:00~01:00:19.
+  compileJava/processResources UP-TO-DATE, compileTestJava/test/bootJar/jar/check/build 실행.
+- 인수 조건: 정상/불완전/빈 목록·동일/충돌 재수신·추가/삭제 거절·실제 쓰기/커밋 실패 시 미확인/롤백,
+  커밋 후 발행 실패·재전송 복구·브로커 재시작 재구독·수신 중지/재개·연속 메시지 직렬 처리 PASS.
+- 자동 수정: Phase 1 3회, Phase 2 1회, Phase 3 2회. 상세/진단 재실행은 작업 명세 참조.
+  Docker 컨테이너 재시작 시 무작위 포트 변경을 확인하고 같은 포트의 Mosquitto 프로세스 재시작으로 검증했다.
+- 변경 총 34개 (앞선 계약 파일 포함). 신규 Java 최대 152줄, 200줄 초과 없음.
+  domain/application/영속성·V1~V4·운영 Compose·CI 설정 변경 없음. Lint/정적 분석/아키텍처 자동 검사 MISSING.
+- Git: staged 0, unstaged/untracked만 존재. diff/공백/범위 점검 PASS. 커밋·푸시·PR·병합/이번 원격 CI 없음.
+- 제한: 실제 펌웨어 MQTT 5·버퍼 삭제·재전송은 NOT VERIFIED. 운영 배포/개발 DB 실행 NOT RUN.
+  DB/MQTT 원자성·서버 outbox는 없다. 수신 세션 만료/확인 유실의 복구는 장치 버퍼 재전송에 의존한다.
+- 커밋 초안: feat: integrate MQTT 5 session ingestion and post-commit confirmations
+- 다음: 사용자 최종 리뷰. 승인 후 Git 통합 또는 장비 인수/START 계약을 진행한다.
+
+## 이전 작업 — MQTT 5.0 메시지 계약
+- 상태 VERIFIED, 사용자 최종 리뷰 대기. 명세: [tasks/MQTT_MESSAGE_CONTRACT.md](tasks/MQTT_MESSAGE_CONTRACT.md).
+- 사용자가 최종 목록·보존 확인 우선 및 MQTT 5.0 기준 진행을 승인했다.
+- 계약: [MQTT_MESSAGE_CONTRACT.md](MQTT_MESSAGE_CONTRACT.md). JSON 계약 버전 1과 프로토콜 5.0을 구분한다.
+- 브랜치 codex/mqtt-message-contract, 기준 main 810ed9a. 시작 전 작업 트리 깨끗함.
+- 이전 불완전 보존은 PR #5로 main 810ed9a에 병합 완료, main CI 성공:
+  https://github.com/jucadrive/home_water_monitor/actions/runs/39623869675
+- 이번 작업의 커밋·푸시·PR·병합은 아직 별도 승인되지 않았다.
+
+## 이전 Phase Result — MQTT 메시지 계약
+- SESSION_RESULT/SESSION_PRESERVED의 고정 토픽·필드·의미·버퍼 상관관계를 정의했다.
+  MQTT 5.0·QoS 1·retain=false, Content Type application/json, Payload Format Indicator 1,
+  UTF-8 JSON 최대 16,384 bytes. 보존 확인은 실제 커밋 성공 후에만 발행한다.
+- 변경: 문서 4개, JSON Schema 2개, JSON 예제 9개, PowerShell 검증 2개. 총 17개 파일.
+- 검증: PowerShell AST 구문 검사 PASS, ./scripts/verify-mqtt-contract.ps1 종료 코드 0.
+  실제 실행 108개 PASS, 실패/건너뜀 0. 정상/불완전/빈 목록·재수신·부정/byte 경계를 확인했다.
+- 자동 수정 1회: 다중 행 if 식 연산자 위치를 수정했다. 계약/기대값 약화 없음.
+- Java·DB·의존성·기존 CI 변경 없음. 기존 Full 97개/병합 main CI 결과를 재사용했다.
+  이번 Gradle·실제 MQTT·원격 CI NOT RUN. 계약 검증은 수동 스크립트이며 CI에 연결하지 않았다.
+- 인수 조건: 오프라인 형식/의미/전달받은 전송 메타데이터 검사 충족. 실제 인증·패킷·커밋 후 발행은 미검증.
+- Git: staged 없음, 문서/검증 파일만 unstaged/untracked. diff/변경 범위 점검 PASS.
+- 커밋 초안: docs: define MQTT 5 session result and preservation contracts
+- 다음: 사용자 최종 리뷰. 이후 연동 실패 처리 계약 계획, 그 뒤 실제 MQTT 어댑터 구현.
+
+## 이전 작업 — 불완전 세션 보존
 - 전체 계획 사용자 승인. 명세: [tasks/INCOMPLETE_SESSION_PRESERVATION.md](tasks/INCOMPLETE_SESSION_PRESERVATION.md).
 - 브랜치 codex/incomplete-session-preservation, 기준 main 276d6a6, 시작 전 작업 트리 깨끗함.
 - 최초 결과 확정: 같은 seq 집합의 변경은 충돌 진단, 추가/삭제는 거절하며 NORMAL로 승격하지 않는다.
@@ -13,7 +69,7 @@
   https://github.com/jucadrive/home_water_monitor/actions/runs/39618593683
   아래 라우팅 Git 실행 전 기록은 이전 체크포인트다.
 
-## 최신 Phase Result — 불완전 세션 보존
+## 이전 Phase Result — 불완전 세션 보존
 - 구현: ProcessTdsSessionService.process()가 정상/불완전 신규/기존을 조율한다.
   NEVER·READ_COMMITTED·세션 잠금·timeout·세션 PK 충돌 후 1회 복구를 유지했다.
 - 0~59개 원본과 INCOMPLETE·누락 순번을 한 트랜잭션으로 확정한다.
@@ -80,15 +136,16 @@
 - 하네스 상태: DONE. PR #1을 main의 abe4d3c로 병합했고 병합 후 원격 CI도 성공했다.
 - 측정 비교 도메인: 사용자 승인으로 PR #2를 main 88682a2에 병합했고 원격 CI도 성공했다.
 - 정상 세션 재수신 진단: 구현·검증 결과를 사용자 승인받았고 커밋 5336e3e를 푸시했다. 원격 CI 성공.
-- PR #4 라우팅 병합/main CI 성공 완료. 현재 작업은 불완전 보존 결과의 사용자 최종 리뷰다.
+- PR #5 불완전 보존 병합/main CI 성공 완료. 현재 MQTT 5.0 실제 서버 연동 구현·검증 결과의 사용자 리뷰 대기다.
 
-## 데스크톱에서 이어가기 — 2026-10-21
+## 데스크톱에서 이어가기 — 2026-10-22
 
 - 현재 구현: 정상/불완전 저장·측정 비교·재수신 진단·세션 잠금·통합 라우팅·최초 저장 경합 처리.
-- 최신 로컬 Full 97개 성공. 이번 미커밋 변경의 원격 CI는 NOT RUN이다.
+- 최신 로컬 Full 158개·계약 검사 108개 성공. 이번 브랜치 원격 CI는 NOT RUN이다.
 - 이전 라우팅 PR #4: https://github.com/jucadrive/home_water_monitor/pull/4 (main 276d6a6 병합/main CI 성공).
-- 불완전 보존 변경은 codex/incomplete-session-preservation에 미커밋 상태다. 임의 switch/reset/stash하지 않는다.
-- 실제 MQTT 수신/확인 발행은 미구현이다. 변경과 검증 증거를 보존한다.
+- 불완전 보존은 main 810ed9a에 병합됐다. 이번 계약 변경은 codex/mqtt-message-contract에 미커밋 상태다.
+  임의 switch/reset/stash하지 않는다.
+- 실제 MQTT 수신/확인 발행을 구현했고 테스트 브로커·DB로 검증했다. 펌웨어/실제 장비 검증은 별도다.
 
 데스크톱 저장소 루트에서:
 ```powershell
@@ -99,19 +156,19 @@ git switch main
 git pull --ff-only origin main
 ```
 
-1. 루트 AGENTS.md -> 이 HANDOFF -> docs/tasks/INCOMPLETE_SESSION_PRESERVATION.md 및 기존 명세를 소스와 대조한다.
+1. 루트 AGENTS.md -> 이 HANDOFF -> docs/tasks/MQTT_INTEGRATION.md 및 계약/기존 명세를 소스와 대조한다.
 2. IntelliJ Project SDK와 Gradle JVM을 JDK 25로 맞춘다. CLI도 JAVA_HOME/PATH를 JDK 25로 설정한다.
 3. Docker Desktop을 실행한다. 테스트는 Testcontainers를 사용하므로 개발 DB/.env 설정이 필요 없다.
 4. PC 변경 후 재현 검증이 필요하면 저장소 루트에서 ./scripts/verify.ps1 -Mode Full을 실행한다.
-5. V3는 개발 DB에 아직 적용하지 않았다. 서버를 시작하면 Flyway가 적용하므로 정상 접속 DB를 확인한다.
+5. V3/V4는 개발 DB에 아직 적용하지 않았다. 서버를 시작하면 Flyway가 적용하므로 정상 접속 DB를 확인한다.
    기존 V1/V2와 데이터 볼륨을 수정·삭제하지 않는다. 실제 .env·DB 데이터·IDE 개인 설정은 Git으로 공유되지 않는다.
 6. 정상/불완전 통합 진입점은 ProcessTdsSessionService.process()다. 외부 트랜잭션 없이 호출한다.
-   기존 정상 전용 진입점/직접 서비스는 유지했다. 실제 MQTT로는 아직 연결하지 않았다.
+   기존 정상 전용 진입점/직접 서비스는 유지했다. MQTT 입력 어댑터도 이 진입점을 사용한다.
 7. 새 요구사항에서는 실행 계획과 최초 승인을 먼저 받고, 커밋·푸시·PR·병합도 합의한 승인을 따른다.
 
 재개 문구:
-> AGENTS.md와 HANDOFF.md, INCOMPLETE_SESSION_PRESERVATION.md 및 현재 작업 브랜치 소스를 확인해 줘.
-> 불완전 보존·재수신·통합 라우팅까지 구현했고 로컬 Full 97개를 통과했어.
+> AGENTS.md와 HANDOFF.md, tasks/MQTT_INTEGRATION.md 및 현재 작업 브랜치 파일을 확인해 줘.
+> MQTT 5.0 실제 수신·저장·커밋 후 확인을 구현했고 Full 158개·계약 검사 108개를 통과했어.
 > 미커밋 변경을 보존하고 결과를 리뷰해 줘. 커밋·푸시·PR·병합은 별도 승인 전 진행하지 마.
 ## 이전 Phase Result — 정상 세션 재수신 진단
 - 상태: VERIFIED. 승인된 Phase 1~3 구현·로컬 검증 완료, 사용자 최종 리뷰 대기.
@@ -259,8 +316,7 @@ git pull --ff-only origin main
 ## 아직 구현하지 않은 것
 
 - 거절·롤백 사건 별도 보존, 원문 로그·운영 보관 정책
-- MQTT 메시지 계약 및 파싱·전송/확인 발행 실패 정책의 구현
-- 실제 MQTT 구독·장치 명령·커밋 후 보존 완료 확인·모니터링
+- 실제 장비 펌웨어 인수 검증, START/장치 명령·상태 보고·운영 모니터링/배포
 - 센서 연결·배선·실측·펌웨어
 
 통계 단위 테스트 통과나 테이블 생성 성공을 전체 수집 기능 완료로 표현하지 않는다.
@@ -285,9 +341,9 @@ git pull --ff-only origin main
 
 ## 다음 작업
 
-1. 불완전 보존 구현·로컬 97개 검증 결과를 사용자 최종 리뷰한다. Git 작업은 별도 승인 후 진행한다.
-2. 다음은 MQTT 메시지 계약 → 연동 실패 처리 순서다. 별도 계획 승인이 필요하다.
-3. MQTT 수신/확인 발행·실패 사건 관측은 승인된 계약에 따라 연결한다.
+1. MQTT 5.0 실제 연동·Full 158개/계약 108개 검증 결과를 사용자 최종 리뷰한다. Git 작업은 별도 승인 후 진행한다.
+2. 실제 장비 인수 또는 START/명령/상태 보고 계약의 다음 범위를 선택해 별도 계획을 수립한다.
+3. 운영 브로커/TLS/ACL·배포·실패 사건 영속화/관측 고도화는 해당 승인 범위를 따른다.
 
 ## Git 체크포인트 — 2026-10-21
 - 하네스 사용자 최종 승인: DONE.

@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "eventType": "SESSION_PRESERVED",
+  "deviceId": "esp32-water-01",
+  "sessionId": "145abec7-dc82-4ca1-9ced-1f976694a338",
+  "preservationResult": "NORMAL",
+  "preservedSampleCount": 60,
+  "comparison": {
+    "identicalCount": 59,
+    "conflictCount": 1
+  }
+}

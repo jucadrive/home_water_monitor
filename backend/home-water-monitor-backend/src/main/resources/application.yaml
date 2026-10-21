@@ -13,5 +13,13 @@ spring:
 
 # 재수신 및 통합 라우팅 트랜잭션의 잠금 대기를 제한하며 DB 전역 설정은 변경하지 않는다.
 water-monitor:
+  mqtt:
+    enabled: ${MQTT_ENABLED:false}
+    broker-uri: ${MQTT_BROKER_URI:}
+    inbound-client-id: ${MQTT_INBOUND_CLIENT_ID:}
+    outbound-client-id: ${MQTT_OUTBOUND_CLIENT_ID:}
+    allowed-device-ids: ${MQTT_ALLOWED_DEVICE_IDS:}
+    username: ${MQTT_USERNAME:}
+    password: ${MQTT_PASSWORD:}
   redelivery:
     lock-timeout-ms: 5000
