@@ -15,7 +15,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Objects;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -27,14 +26,16 @@ public class ProcessNormalTdsSessionRedeliveryService {
     private final TdsSessionLockAdapter lockAdapter;
     private final TdsMeasurementJpaRepository measurements;
     private final TdsRedeliveryPersistenceAdapter persistence;
+    private final TdsSessionMetadataValidator metadata;
 
     public ProcessNormalTdsSessionRedeliveryService(NormalTdsSessionInputValidator validator,
             TdsSessionLockAdapter lockAdapter, TdsMeasurementJpaRepository measurements,
-            TdsRedeliveryPersistenceAdapter persistence) {
+            TdsRedeliveryPersistenceAdapter persistence, TdsSessionMetadataValidator metadata) {
         this.validator = validator;
         this.lockAdapter = lockAdapter;
         this.measurements = measurements;
         this.persistence = persistence;
+        this.metadata = metadata;
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
@@ -79,12 +80,6 @@ public class ProcessNormalTdsSessionRedeliveryService {
                 || session.getPreservedSampleCount() != 60) {
             throw new IllegalArgumentException("정상 원본 60개를 보존한 세션만 재수신할 수 있습니다.");
         }
-        if (!Objects.equals(session.getDeviceId(), command.deviceId())
-                || !Objects.equals(session.getCalibrationVersion(), command.calibrationVersion())
-                || session.getSamplingIntervalMs() != command.samplingIntervalMs()
-                || session.getTemperatureAssumedC().compareTo(command.temperatureAssumedC()) != 0
-                || !lockAdapter.matchesStartedAt(command.sessionId(), command.startedAt())) {
-            throw new IllegalArgumentException("세션 메타데이터가 다릅니다.");
-        }
+        metadata.validate(session, command);
     }
 }
