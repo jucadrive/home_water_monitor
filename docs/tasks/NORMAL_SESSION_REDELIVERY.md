@@ -1,6 +1,6 @@
 # 정상 보존 세션 재수신 진단 — 구현 계획
 
-상태: VERIFIED — 2026-10-21 승인 범위 구현·로컬 검증 완료, 최종 사용자 리뷰 대기.
+상태: DONE — 2026-10-21 구현 결과 및 Git 작업을 사용자 승인받았다. PR #3 main 통합 진행 중이며 최종 원격 상태는 PR을 확인한다.
 작성일: 2026-10-21. 기준 커밋: main의 88682a2, 계획 작성 전 작업 트리 깨끗함 확인.
 
 ## 1. 목표와 현재 사실
@@ -227,3 +227,9 @@ Full에서 검증한다. 새 CI 설정이나 Lint 의존성은 추가하지 않�
 - 브랜치: codex/normal-session-redelivery.
 - 커밋 메시지: feat: record normal session redelivery diagnostics atomically.
 - PR 생성·main 병합은 이번 승인 범위에 포함하지 않는다. 원격 CI 결과는 푸시 후 확인한다.
+
+## 데스크톱 인계와 PR 통합
+- 소스 커밋 5336e3e 커밋·푸시 완료. 원격 CI https://github.com/jucadrive/home_water_monitor/actions/runs/39572555646 성공.
+- 사용자 요청으로 PR https://github.com/jucadrive/home_water_monitor/pull/3 생성·리뷰 후 main 병합을 진행한다.
+- HANDOFF에 데스크톱 재개 절차·JDK/Docker·V3 개발 DB 미적용·후속 후보를 기록했다.
+- 이 추가 변경은 인계 문서뿐이다. 최종 PR head/merge SHA와 CI 상태는 위 원격 PR을 따른다.

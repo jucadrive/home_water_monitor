@@ -9,8 +9,41 @@
 - 구축 명세: [tasks/HARNESS_BOOTSTRAP.md](tasks/HARNESS_BOOTSTRAP.md).
 - 하네스 상태: DONE. PR #1을 main의 abe4d3c로 병합했고 병합 후 원격 CI도 성공했다.
 - 측정 비교 도메인: 사용자 승인으로 PR #2를 main 88682a2에 병합했고 원격 CI도 성공했다.
-- 현재 작업: 정상 세션 재수신 진단 VERIFIED. 브랜치 codex/normal-session-redelivery. 사용자 최종 리뷰·커밋·푸시 승인 대기.
+- 정상 세션 재수신 진단: 구현·검증 결과를 사용자 승인받았고 커밋 5336e3e를 푸시했다. 원격 CI 성공.
+- 현재 Git 작업: 사용자 요청으로 PR #3 생성·리뷰·main 병합 진행. 최신 병합/CI 상태는 PR #3을 확인한다.
 
+## 데스크톱에서 이어가기 — 2026-10-21
+
+- 현재 구현: 정상 신규 저장·측정 비교·기존 NORMAL 세션 재수신 진단과 세션별 잠금까지 완료.
+- 로컬 Full 45개 성공, 소스 커밋 5336e3e의 원격 Verify 성공.
+- PR: https://github.com/jucadrive/home_water_monitor/pull/3
+- 이 인계 문서는 PR 병합 전에 작성했다. 최종 병합 여부·SHA·최신 CI 결과는 위 PR에서 확인한다.
+- 다음 구현을 아직 승인받거나 시작하지 않았다. 추천 후보는 신규/기존 라우팅과 최초 저장 경합 처리다.
+  불완전 세션 보존·실제 MQTT 수신/확인 발행은 계속 미구현이다.
+
+데스크톱 저장소 루트에서:
+```powershell
+# 로컬 변경이 있으면 먼저 차이를 확인하고 보존한다. 임의 reset/clean/stash를 하지 않는다.
+git status
+# 작업 트리가 깨끗한 경우에만 main으로 전환하고 병합된 최신 내용을 받는다.
+git switch main
+git pull --ff-only origin main
+```
+
+1. 루트 AGENTS.md -> 이 HANDOFF -> docs/tasks/NORMAL_SESSION_REDELIVERY.md를 읽고 실제 소스와 대조한다.
+2. IntelliJ Project SDK와 Gradle JVM을 JDK 25로 맞춘다. CLI도 JAVA_HOME/PATH를 JDK 25로 설정한다.
+3. Docker Desktop을 실행한다. 테스트는 Testcontainers를 사용하므로 개발 DB/.env 설정이 필요 없다.
+4. PC 변경 후 재현 검증이 필요하면 저장소 루트에서 ./scripts/verify.ps1 -Mode Full을 실행한다.
+5. V3는 개발 DB에 아직 적용하지 않았다. 서버를 시작하면 Flyway가 적용하므로 정상 접속 DB를 확인한다.
+   기존 V1/V2와 데이터 볼륨을 수정·삭제하지 않는다. 실제 .env·DB 데이터·IDE 개인 설정은 Git으로 공유되지 않는다.
+6. 기존 신규 SaveNormalTdsSessionService와 재수신 ProcessNormalTdsSessionRedeliveryService는 별도 진입점이다.
+   신규/기존을 자동 분기하거나 MQTT로 연결했다고 가정하지 않는다.
+7. 새 요구사항에서는 실행 계획과 최초 승인을 먼저 받고, 커밋·푸시·PR·병합도 합의한 승인을 따른다.
+
+재개 문구:
+> AGENTS.md와 HANDOFF.md, NORMAL_SESSION_REDELIVERY.md 및 현재 main 소스를 확인해 줘.
+> 정상 신규 저장·측정 비교·정상 세션 재수신 진단은 구현했고 45개 테스트와 원격 CI를 통과했어.
+> 다음은 신규/기존 라우팅·최초 저장 경합 처리의 계획을 준비하자. 아직 구현하지 말고 승인부터 받아줘.
 ## 최신 Phase Result — 정상 세션 재수신 진단
 - 상태: VERIFIED. 승인된 Phase 1~3 구현·로컬 검증 완료, 사용자 최종 리뷰 대기.
 - 구현: V3 진단 헤더/60개 상세, 원본 스냅샷, seq별 비교, 메타데이터 거절, 공통 입력 검증,
@@ -34,7 +67,8 @@
 - 제한: 기존 NORMAL 60개 세션 전용. 신규/기존 자동 라우팅·최초 저장 경합·불완전 보존·
   거절/실패 사건 영속화·MQTT 확인 발행·보관/삭제 정책은 미구현이다.
 - V3는 테스트 DB에만 적용했다. 개발 DB는 서버 실행 시 Flyway로 적용할 수 있으며 이번에는 실행하지 않았다.
-- 원격 CI: NOT RUN. Lint·정적 분석·아키텍처 자동 검사는 기존 MISSING 상태다.
+- 원격 CI: 소스 커밋 5336e3e Verify 성공(실행 39572555646). 이후 문서 갱신·PR 병합 검사는 PR #3 참고.
+  Lint·정적 분석·아키텍처 자동 검사는 기존 MISSING 상태다.
 - Git: codex/normal-session-redelivery, 변경 26개 파일(기존 6·신규 20), 커밋·푸시 없음.
 - 커밋 초안: feat: record normal session redelivery diagnostics atomically
 - 다음: 사용자 최종 리뷰와 커밋·푸시 승인. 재승인 전 추가 기능·PR·병합은 진행하지 않는다.
@@ -181,7 +215,7 @@
 
 ## 다음 작업
 
-1. 정상 재수신 진단 전체 검증 결과를 사용자에게 보고하고 최종 리뷰·커밋·푸시 승인을 받는다.
+1. 재수신 구현·로컬 45개·원격 CI 검증 완료. PR #3 main 병합 작업을 마치고 데스크톱에서 최신 main을 받는다.
 2. 다음 후보는 신규/기존 라우팅·최초 저장 경합, 또는 불완전 세션 보존이다. 별도 계획 승인이 필요하다.
 3. 승인된 범위에서 단일 에이전트가 구현·검증한다. 미정 진단 저장·동시성 정책은 별도 검토한다.
 
