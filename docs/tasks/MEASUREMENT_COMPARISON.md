@@ -1,6 +1,6 @@
 # 측정 원본 비교 도메인 구현 계획
 
-상태: VERIFIED — 2026-10-21 최초 계획 승인 후 구현·로컬 검증 완료, 최종 사용자 리뷰 대기.
+상태: DONE — 사용자 승인에 따라 PR #2 리뷰·main 병합 완료 (88682a2). 아래 Phase Result는 구현 당시 기록이다.
 작성일: 2026-10-21. 기준: main의 abe4d3c, 작업 트리 깨끗함을 확인한 뒤 계획 작성.
 
 ## 목표와 범위
@@ -103,3 +103,5 @@ Gradle 프로젝트 기준 신규 소스:
 - 승인 범위: 소스 3개와 문서 5개, codex/measurement-comparison 브랜치 커밋·푸시.
 - 커밋 메시지: feat: add measurement content comparison domain.
 - 푸시 후 해당 SHA의 원격 CI를 확인한다. PR 생성·main 병합은 이번 승인 범위가 아니다.
+
+최종 원격 근거: PR https://github.com/jucadrive/home_water_monitor/pull/2 , main CI https://github.com/jucadrive/home_water_monitor/actions/runs/39568032613 성공. 이후 재수신 구현은 NORMAL_SESSION_REDELIVERY.md를 따른다.
