@@ -36,6 +36,8 @@ JDK 25 실행 확인, 컨텍스트 테스트 DB 격리, 검증 스크립트와 G
 최신 실행 증거·환경 제한·다음 조치는 ../HANDOFF.md에 기록한다.
 커밋 초안: chore: establish single-agent harness and isolated verification
 
-검증 결과: Unit 7개·Full 전체 11개 성공, 실패/오류/건너뜀 0, build 성공, 스크립트 구문·diff 검사 통과. 실패 종료 코드 1 전파도 최초 캐시 접근 거부에서 확인했다. 원격 CI·Linux 실행은 NOT VERIFIED이며 브랜치 보호는 설정하지 않았다.
+검증 결과: Unit 7개·Full 전체 11개 성공, 실패/오류/건너뜀 0, build 성공, 스크립트 구문·diff 검사 통과. 실패 종료 코드 1 전파도 최초 캐시 접근 거부에서 확인했다. 이 기록 이후 원격 Linux CI도 성공했다. PR #1과 main 병합 커밋 abe4d3c, main Verify 실행 39563945349로 확인했다. 브랜치 보호는 설정하지 않았다.
 
 후속 승인: 사용자가 하네스 변경 커밋·브랜치 전략 추가를 명시 승인했다. docs/GIT_WORKFLOW.md를 적용하며 푸시·PR·병합은 별도 승인받는다.
+
+후속 완료: 사용자가 푸시·PR 생성·리뷰 후 병합을 승인했고 PR #1을 main에 병합했다. 로컬 main도 abe4d3c로 갱신했다. 새 기능은 별도 작업 명세와 승인으로 진행한다.
