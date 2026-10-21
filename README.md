@@ -54,7 +54,8 @@ cd backend/home-water-monitor-backend
 
 Codex에는 이 저장소 루트를 프로젝트로 연다. [최신 인계](docs/HANDOFF.md)를 먼저 읽고 한 단계씩 이어간다.
 
-현재 재개 지점은 [측정 도메인 비교 코드와 단위 테스트](docs/NEXT_MEASUREMENT_COMPARISON.md)다. 해당 문서는 미구현 설계 자료다. 별도 기능 계획 승인 후 AI가 구현·검증한다.
+현재 상태·검증 증거는 [HANDOFF](docs/HANDOFF.md)를 따른다. MQTT 5.0 서버 수신·저장·커밋 후 확인을 구현했으며,
+설정과 실패 정책은 [MQTT 연동 안내](docs/MQTT_INTEGRATION.md), 인수 조건은 [작업 명세](docs/tasks/MQTT_INTEGRATION.md)를 참조한다.
 
 PC를 바꾸기 전 진행 메모와 변경 파일을 커밋·푸시하고, 이어받는 PC는 수정 전 작업 트리가 깨끗한지 확인한 뒤 `git pull --ff-only`로 갱신한다.
 

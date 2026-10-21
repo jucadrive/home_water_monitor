@@ -4,7 +4,7 @@
 - 집에서 채수한 물의 TDS 장기 추세를 관측한다. TDS로 수질 안전성·변색 원인을 판정하지 않는다.
 - Git 루트는 이 폴더, Gradle 루트는 backend/home-water-monitor-backend다.
 - Java 25, Spring Boot 4.1.1, Gradle Wrapper 9.8.1, PostgreSQL 18을 사용한다.
-- Spring Data JPA·Flyway를 사용하며 MQTT 의존성은 있으나 실제 수집은 미구현이다.
+- Spring Data JPA·Flyway와 MQTT 5.0 수신·커밋 후 보존 확인을 사용한다. 실제 장비 인수 검증은 별도다.
 
 ## 2. 문서와 사실 확인
 - 운영 방식은 docs/Harness.md, 현재 상태는 docs/HANDOFF.md와 실제 소스를 따른다.

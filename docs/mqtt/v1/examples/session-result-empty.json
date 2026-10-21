@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "eventType": "SESSION_RESULT",
+  "deviceId": "esp32-water-01",
+  "sessionId": "145abec7-dc82-4ca1-9ced-1f976694a340",
+  "startedAt": null,
+  "expectedSamples": 60,
+  "samplingIntervalMs": 1000,
+  "temperatureAssumedC": 25.0,
+  "calibrationVersion": "test-calibration-v1",
+  "measurements": []
+}

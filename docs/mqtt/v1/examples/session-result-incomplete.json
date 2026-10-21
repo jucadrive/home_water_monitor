@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "eventType": "SESSION_RESULT",
+  "deviceId": "esp32-water-01",
+  "sessionId": "145abec7-dc82-4ca1-9ced-1f976694a339",
+  "startedAt": "2026-10-22T00:00:00Z",
+  "expectedSamples": 60,
+  "samplingIntervalMs": 1000,
+  "temperatureAssumedC": 25.0,
+  "calibrationVersion": "test-calibration-v1",
+  "measurements": [
+    {
+      "seq": 1,
+      "elapsedMs": 1000,
+      "tdsPpm": 151.3,
+      "isWarmup": false,
+      "rawVoltageMv": 750.0
+    }
+  ]
+}
