@@ -356,5 +356,5 @@ Phase 4: 실제 ESP32 가상 측정 -> 브로커 -> 서버/DB -> 보존 확인 -
   커밋/푸시/PR/병합/원격 CI 없음. 커밋 초안은 feat: add ESP32 MQTT 5 firmware and device acceptance harness.
 - 사용자 최종 리뷰 및 커밋·푸시·PR 생성·리뷰·main 병합·CI 확인·로컬 동기화 승인(2026-10-22).
   위 Git 상태는 실행 전 체크포인트이며 실제 통합 결과는 Git/PR/Actions로 확인한다.
-- 다음 Phase: 승인된 Git 통합. 사무실 망 지연 원인 조사는 후속 작업이다.
+- Git 통합 완료: PR #7/main 1aaaa06, push·PR·병합 후 CI 성공. 사무실 망 지연 원인 조사는 사용자 지시로 제외했다.
   센서 실측/교정·제품 MQTT START/서버 UUID 발급·TLS/운영·전원 손실 시 영속 버퍼는 별도 후속이다.
