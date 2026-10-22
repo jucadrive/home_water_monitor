@@ -1,0 +1,11 @@
+user water-server
+topic read home/water/v1/esp32-bench/events
+topic write home/water/v1/esp32-bench/preservation
+
+user esp32-bench
+topic write home/water/v1/esp32-bench/events
+topic read home/water/v1/esp32-bench/preservation
+
+user water-inspector
+topic read home/water/v1/esp32-bench/events
+topic read home/water/v1/esp32-bench/preservation

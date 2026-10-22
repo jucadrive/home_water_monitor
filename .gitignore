@@ -45,3 +45,16 @@ nbbuild/
 dist/
 nbdist/
 .nb-gradle/
+
+# ESP-IDF local SDK, configuration, generated dependencies and Python output
+.tools/
+sdkconfig
+sdkconfig.old
+sdkconfig.local
+managed_components/
+__pycache__/
+*.pyc
+/firmware/esp32/wifi.local.json
+/firmware/esp32/main/local_config.h
+/infra/device-test/secrets.local.json
+/infra/device-test/private/

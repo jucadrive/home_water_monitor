@@ -5,6 +5,7 @@
 - Git 루트는 이 폴더, Gradle 루트는 backend/home-water-monitor-backend다.
 - Java 25, Spring Boot 4.1.1, Gradle Wrapper 9.8.1, PostgreSQL 18을 사용한다.
 - Spring Data JPA·Flyway와 MQTT 5.0 수신·커밋 후 보존 확인을 사용한다. 실제 장비 인수 검증은 별도다.
+- ESP32 펌웨어는 firmware/esp32의 ESP-IDF 5.5.5·고정 ESP-MQTT를 사용한다. 현재 소스는 가상 측정이다.
 
 ## 2. 문서와 사실 확인
 - 운영 방식은 docs/Harness.md, 현재 상태는 docs/HANDOFF.md와 실제 소스를 따른다.
@@ -62,6 +63,10 @@
 - 테스트에 개발 DB·실제 비밀번호를 사용하지 않는다.
 - 실행 가능 여부·최신 실행 결과는 docs/HANDOFF.md에서 확인한다.
 - 종료 코드·테스트 수·실패·오류·건너뜀을 확인한다. 캐시 결과와 새 실행을 구분한다.
+- 펌웨어: ./scripts/verify-esp32.ps1 -Mode Build 또는 CredentialFree(비밀값 없는 빌드).
+- 펌웨어 Host는 전용 인수 DB/브로커와 JDK 25가 필요하다. UART는 실제 COM3/IDLE 보드가 필요하다.
+- ./scripts/esp32.ps1 -Action Test는 테스트 이미지 빌드만 수행한다. 실제 실행·UART 결과까지 확인한다.
+- 장비 인수·설치/검증 명령은 docs/ESP32_SETUP.md 및 docs/ESP32_ACCEPTANCE.md를 따른다.
 
 ## 7. Autonomous Workflow
 - 단일 에이전트로 수행하며 하위 에이전트 생성·작업 위임을 하지 않는다.
