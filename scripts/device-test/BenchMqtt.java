@@ -37,7 +37,8 @@ public class BenchMqtt {
                     String content = p == null || p.getContentType() == null ? "" : p.getContentType();
                     System.out.println("MESSAGE\t" + b64(topic) + "\t" + message.getQos() + "\t" + message.isRetained()
                         + "\t" + (p != null && p.getPayloadFormat()) + "\t" + b64(content) + "\t"
-                        + Base64.getEncoder().encodeToString(message.getPayload()));
+                        + Base64.getEncoder().encodeToString(message.getPayload())
+                        + (System.getenv("HWM_TEST_INCLUDE_EXPIRY") == null ? "" : "\t" + (p == null ? null : p.getMessageExpiryInterval())));
                 }
             });
             MqttConnectionOptions options = new MqttConnectionOptions();
@@ -67,6 +68,7 @@ public class BenchMqtt {
                 MqttProperties p = new MqttProperties();
                 if (!args[5].equals("missing")) p.setPayloadFormat(Boolean.parseBoolean(args[5]));
                 if (!args[6].equals("missing")) p.setContentType(args[6]);
+                if (args.length > 7) p.setMessageExpiryInterval(Long.parseLong(args[7]));
                 message.setProperties(p);
                 requireAck(client.publish(args[1], message));
                 System.out.println("PUBLISHED");

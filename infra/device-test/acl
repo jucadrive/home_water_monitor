@@ -1,11 +1,17 @@
 user water-server
 topic read home/water/v1/esp32-bench/events
 topic write home/water/v1/esp32-bench/preservation
+topic write home/water/v1/esp32-bench/commands
+topic read home/water/v1/esp32-bench/status
 
 user esp32-bench
 topic write home/water/v1/esp32-bench/events
 topic read home/water/v1/esp32-bench/preservation
+topic read home/water/v1/esp32-bench/commands
+topic write home/water/v1/esp32-bench/status
 
 user water-inspector
+topic read home/water/v1/esp32-bench/commands
+topic read home/water/v1/esp32-bench/status
 topic read home/water/v1/esp32-bench/events
 topic read home/water/v1/esp32-bench/preservation

@@ -175,7 +175,7 @@ def run(args):
     evidence = None
     with context as proxy:
         if proxy:
-            proxy.set_mode("drop-puback-only" if args.case == "proxy-early" else "drop-puback" if args.case == "proxy-puback" else "drop-confirmation")
+            proxy.set_mode("drop-status-puback" if args.case == "proxy-status-pressure" else "drop-puback-only" if args.case == "proxy-early" else "drop-puback" if args.case == "proxy-puback" else "drop-confirmation")
         observer = Observer()
         try: uart = Uart(args.port)
         except Exception:
@@ -197,7 +197,7 @@ def run(args):
             if args.samples == 60:
                 test.rejected_command("RETRY " + test.session_id)
                 test.rejected_command("START " + str(uuid.uuid4()))
-            if args.case == "normal" or args.case == "proxy-early":
+            if args.case in ("normal", "proxy-early", "proxy-status-pressure"):
                 test.wait(lambda: test.released, 120, "Normal preservation")
             elif args.case in ("retry", "db-outage"):
                 test.wait(lambda: len(test.results) >= 2, 150, "Second result publication")
@@ -254,6 +254,14 @@ def run(args):
                 else: raise AcceptanceFailure("Committed redelivery diagnostics did not match repeated publications")
             if args.case == "proxy-early":
                 require(not any("HWM_PUBACK success=1" in line for _, line in uart.history), "Expected preservation before successful PUBACK")
+            if args.case == "proxy-status-pressure":
+                require(proxy.status_pubacks_dropped >= 2 and proxy.rx_connections >= 2,
+                        "Status PUBACK loss and RX disposal/recovery were not exercised")
+                # Preservation/release above must complete during the fault. Restore RX before independent duplicate guards.
+                proxy.set_mode("pass")
+                settle = time.monotonic() + 20
+                while time.monotonic() < settle: test.pump()
+                require(uart.refresh().get("rx_ready") == "1", "Status receiver did not recover after fault removal")
             test.completed_guards()
             evidence = {"case": args.case, "samples": args.samples, "sessionId": test.session_id,
                         "resultPublications": len(test.results), "uniquePayloadHashes": len({r["sha256"] for r in test.results}),
@@ -261,7 +269,8 @@ def run(args):
                         "status": uart.status, "physicalDevice": True, "completedGuardsVerified": True}
             if proxy:
                 evidence["proxy"] = {"txConnections": proxy.tx_connections, "publications": list(proxy.publications),
-                                     "pubacksDropped": proxy.pubacks_dropped, "confirmationsDropped": proxy.confirmations_dropped}
+                                     "pubacksDropped": proxy.pubacks_dropped, "confirmationsDropped": proxy.confirmations_dropped,
+                                     "statusPubacksDropped": proxy.status_pubacks_dropped, "rxConnections": proxy.rx_connections}
         except Exception:
             CACHE.mkdir(parents=True, exist_ok=True)
             diagnostic = {"case": args.case, "sessionId": test.session_id, "status": uart.status,
@@ -282,7 +291,7 @@ def run(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--case", choices=["normal", "retry", "exhaust", "db-outage", "broker-restart", "proxy-puback", "proxy-early", "proxy-negative"], default="normal")
+    parser.add_argument("--case", choices=["normal", "retry", "exhaust", "db-outage", "broker-restart", "proxy-puback", "proxy-early", "proxy-negative", "proxy-status-pressure"], default="normal")
     parser.add_argument("--samples", type=int, choices=[0, 1, 59, 60], default=60)
     parser.add_argument("--port", default="COM3")
     args = parser.parse_args()

@@ -20,6 +20,13 @@ static atomic_bool overflow;
 static esp_mqtt_client_handle_t rx, tx;
 static callback_context rx_context = {.receiver = true}, tx_context;
 static hwm_frame frame;
+static struct { char body[HWM_CONTROL_MAX+1]; size_t used,total; bool active; } command_frame;
+static bool receiving_command, preservation_ready, commands_ready;
+static int commands_subscription_id, status_msg_id=-1;
+static char status_pending[HWM_CONTROL_MAX+1];
+static size_t status_pending_length;
+static uint64_t status_deadline;
+static char commands_topic[112], status_topic[112];
 static char preservation_topic[112], events_topic[112], rx_id[96], tx_id[96];
 static bool wifi_up, wifi_pending, receiver_ready;
 static uint64_t wifi_deadline, wifi_next, rx_deadline, rx_next;
@@ -43,6 +50,21 @@ static void wifi_event(void *arg, esp_event_base_t base, int32_t id, void *data)
     else return;
     post(&e);
 }
+static int command_feed(esp_mqtt_event_handle_t m,bool metadata)
+{
+    if(m->current_data_offset==0) {
+        bool overlap=command_frame.active;command_frame.active=false;command_frame.used=0;
+        if(overlap || !metadata || m->total_data_len<=0 || m->total_data_len>HWM_CONTROL_MAX)return -1;
+        command_frame.total=m->total_data_len;command_frame.active=true;
+    }
+    if(!command_frame.active || m->data_len<=0 || !m->data || m->total_data_len!=(int)command_frame.total
+            || m->current_data_offset!=(int)command_frame.used || m->data_len>(int)(command_frame.total-command_frame.used)) {
+        command_frame.active=false;return -1;
+    }
+    memcpy(command_frame.body+command_frame.used,m->data,m->data_len);command_frame.used+=m->data_len;
+    if(command_frame.used<command_frame.total)return 0;
+    command_frame.body[command_frame.used]=0;command_frame.active=false;return 1;
+}
 static void mqtt_event(void *arg, esp_event_base_t base, int32_t id, void *data)
 {
     (void)base;
@@ -57,19 +79,31 @@ static void mqtt_event(void *arg, esp_event_base_t base, int32_t id, void *data)
                 m->error_handle->esp_transport_sock_errno, m->error_handle->connect_return_code);
         }
         e.kind = context->receiver ? HWM_NET_RX_DOWN : HWM_NET_TX_DOWN;
-        if (context->receiver) frame.active = false;
+        if (context->receiver) { frame.active = false;command_frame.active=false; }
     } else if (id == MQTT_EVENT_SUBSCRIBED && context->receiver) {
         e.kind = HWM_NET_RX_READY;
         e.success = e.success && m->data_len == 1 && m->data && (unsigned char)m->data[0] == 1;
-    } else if (id == MQTT_EVENT_PUBLISHED && !context->receiver) {
-        e.kind = HWM_NET_PUBACK;
+    } else if (id == MQTT_EVENT_PUBLISHED) {
+        e.kind = context->receiver?HWM_NET_STATUS_ACK:HWM_NET_PUBACK;
         /* Pinned SDK exposes the optional MQTT 5 reason byte in event.data. Omitted means success. */
         e.success = e.success && (m->data_len == 0 || (m->data_len == 1 && m->data && (unsigned char)m->data[0] < 0x80));
     } else if (id == MQTT_EVENT_DATA && context->receiver) {
+        if(m->current_data_offset==0)receiving_command=m->topic && m->topic_len==(int)strlen(commands_topic)
+            && !memcmp(m->topic,commands_topic,m->topic_len);
+        const char *expected_topic=receiving_command?commands_topic:preservation_topic;
         bool metadata = e.success && m->qos == 1 && !m->retain && m->topic
-            && m->topic_len == (int)strlen(preservation_topic) && !memcmp(m->topic, preservation_topic, m->topic_len)
+            && m->topic_len == (int)strlen(expected_topic) && !memcmp(m->topic, expected_topic, m->topic_len)
             && m->property && m->property->payload_format_indicator && m->property->content_type
             && m->property->content_type_len == 16 && !memcmp(m->property->content_type, "application/json", 16);
+        if(receiving_command) {
+            /* Pinned SDK does not expose received Expiry. Approved exception: boot/window checks still apply. */
+            bool active=command_frame.active;
+            int result=command_feed(m,metadata);
+            if(result==0 || (result<0 && m->current_data_offset!=0 && !active))return;
+            e.kind=result==1 && hwm_parse_control(command_frame.body,command_frame.used,&e.command)
+                && !strcmp(e.command.device_id,cfg.device_id)?HWM_NET_COMMAND:HWM_NET_INVALID_COMMAND;
+            post(&e);return;
+        }
         bool was_active = frame.active;
         int result = hwm_frame_feed(&frame, m->total_data_len, m->current_data_offset, m->data, m->data_len, metadata);
         if (result == 0) return;
@@ -131,6 +165,8 @@ static void reset_rx(uint64_t now)
         return;
     }
     frame.active = false;
+    command_frame.active=false;preservation_ready=commands_ready=false;
+    status_msg_id=-1;status_pending_length=0;
     rx_next = now + rx_backoff;
     if (rx_backoff < 16000) rx_backoff *= 2;
 }
@@ -156,6 +192,8 @@ bool hwm_transport_init(const hwm_transport_config *config)
     if (esp_wifi_set_mode(WIFI_MODE_STA) != ESP_OK || esp_wifi_set_config(WIFI_IF_STA, &wifi) != ESP_OK || esp_wifi_start() != ESP_OK) return false;
     snprintf(preservation_topic, sizeof(preservation_topic), "home/water/v1/%s/preservation", cfg.device_id);
     snprintf(events_topic, sizeof(events_topic), "home/water/v1/%s/events", cfg.device_id);
+    snprintf(commands_topic,sizeof(commands_topic),"home/water/v1/%s/commands",cfg.device_id);
+    snprintf(status_topic,sizeof(status_topic),"home/water/v1/%s/status",cfg.device_id);
     snprintf(rx_id, sizeof(rx_id), "hwm-%s-rx", cfg.device_id);
     snprintf(tx_id, sizeof(tx_id), "hwm-%s-tx", cfg.device_id);
     return true;
@@ -183,6 +221,15 @@ void hwm_transport_poll(uint64_t now)
         rx_deadline = now + 10000;
         if (!rx) reset_rx(now);
     }
+    /* Dispose an unacknowledged status outbox with its RX client; never consume a result attempt. */
+    if (rx && status_msg_id >= 0 && now >= status_deadline) reset_rx(now);
+    if(rx && receiver_ready && status_msg_id<0 && status_pending_length) {
+        esp_mqtt5_publish_property_config_t properties={.payload_format_indicator=true,.content_type="application/json",.message_expiry_interval=10};
+        if(esp_mqtt5_client_set_publish_property(rx,&properties)==ESP_OK) {
+            int id=esp_mqtt_client_enqueue(rx,status_topic,status_pending,status_pending_length,1,0,true);
+            if(id>=0){status_msg_id=id;status_pending_length=0;status_deadline=now+10000;}
+        }
+    }
 }
 
 bool hwm_transport_receive(hwm_net_event *event, uint64_t now)
@@ -202,17 +249,24 @@ bool hwm_transport_receive(hwm_net_event *event, uint64_t now)
         wifi_next = now + wifi_backoff;
         if (wifi_backoff < 16000) wifi_backoff *= 2;
     } else if (event->kind == HWM_NET_RX_CONNECTED || event->kind == HWM_NET_RX_READY || event->kind == HWM_NET_RX_DOWN
-               || event->kind == HWM_NET_CONFIRMATION || event->kind == HWM_NET_INVALID_CONFIRMATION) {
+               || event->kind == HWM_NET_CONFIRMATION || event->kind == HWM_NET_INVALID_CONFIRMATION
+               || event->kind == HWM_NET_COMMAND || event->kind == HWM_NET_INVALID_COMMAND || event->kind == HWM_NET_STATUS_ACK) {
         if (!rx || event->generation != rx_context.generation) { event->kind = HWM_NET_NONE; return true; }
         if (event->kind == HWM_NET_RX_CONNECTED) {
+            preservation_ready=commands_ready=false;
             esp_mqtt5_subscribe_property_config_t properties = {.retain_as_published_flag = true, .retain_handle = 2};
             if (!event->success || esp_mqtt5_client_set_subscribe_property(rx, &properties) != ESP_OK
-                || (subscription_id = esp_mqtt_client_subscribe(rx, preservation_topic, 1)) < 0) reset_rx(now);
+                || (subscription_id = esp_mqtt_client_subscribe(rx, preservation_topic, 1)) < 0
+                || esp_mqtt5_client_set_subscribe_property(rx,&properties)!=ESP_OK
+                || (commands_subscription_id=esp_mqtt_client_subscribe(rx,commands_topic,1))<0) reset_rx(now);
         } else if (event->kind == HWM_NET_RX_READY) {
-            receiver_ready = event->success && event->msg_id == subscription_id;
+            if(event->success && event->msg_id==subscription_id)preservation_ready=true;
+            else if(event->success && event->msg_id==commands_subscription_id)commands_ready=true;
+            else {reset_rx(now);return true;}
+            receiver_ready = preservation_ready && commands_ready;
             if (receiver_ready) { rx_backoff = 1000; printf("HWM_RX_READY mqtt=5\n"); }
-            else reset_rx(now);
         } else if (event->kind == HWM_NET_RX_DOWN) reset_rx(now);
+        else if(event->kind==HWM_NET_STATUS_ACK && event->msg_id==status_msg_id)status_msg_id=-1;
     }
     return true;
 }
@@ -236,6 +290,11 @@ int hwm_transport_publish(const char *payload, size_t length)
     return esp_mqtt_client_enqueue(tx, events_topic, payload, length, 1, 0, true);
 }
 bool hwm_transport_stop_tx(void) { return destroy(&tx); }
+bool hwm_transport_status(const char *payload,size_t length)
+{
+    if(!payload || !length || length>HWM_CONTROL_MAX)return false;
+    memcpy(status_pending,payload,length);status_pending[length]=0;status_pending_length=length;return true;
+}
 unsigned hwm_random_jitter(unsigned cap)
 {
     if (!cap) return 0;

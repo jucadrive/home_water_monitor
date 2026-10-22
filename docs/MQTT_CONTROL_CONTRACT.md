@@ -1,14 +1,15 @@
-# MQTT START·장치 상태 보고 계약 v1 — 설계 초안
+# MQTT START·장치 상태 보고 계약 v1
 
-상태: IN_PROGRESS — 설계 초안 작성/문서 검토 완료, 사용자 계약 승인 대기. 구현 NOT RUN/NOT VERIFIED.
+상태: 계약·전체 실행 계획 사용자 승인 완료. 구현/인수 진행 중이며 실제 검증 결과는 실행 계획을 따른다.
+실행 계획: [tasks/MQTT_CONTROL_IMPLEMENTATION.md](tasks/MQTT_CONTROL_IMPLEMENTATION.md).
 작성: 2026-10-22. 기준 main 1aaaa06(PR #7). 작업 명세: [tasks/MQTT_CONTROL_CONTRACT.md](tasks/MQTT_CONTROL_CONTRACT.md).
-이 문서는 **제안**이다. 기존 SESSION_RESULT/SESSION_PRESERVED v1의 필드·보존 규칙을 변경하지 않는다.
+이 문서는 **승인된 계약**이다. 기존 SESSION_RESULT/SESSION_PRESERVED v1의 필드·보존 규칙을 변경하지 않는다.
 
 ## 1. 목적과 현재 경계
 
 - 앱/PC의 REST 요청으로 서버가 sessionId를 발급하고, MQTT START로 ESP32의 측정을 시작한다.
 - 서버의 명령 접수, MQTT 전달 확인, 장치 실행 확인, DB 보존, 장치 버퍼 해제를 구분한다.
-- 현재 실제 소스에는 USB START/RETRY/STATUS만 있다. 서버 REST 제어·명령 DB·MQTT 상태 수신은 없다.
+- 설계 시작 시에는 USB START/RETRY/STATUS만 있었다. 현재 구현 진행 상태는 HANDOFF와 실행 계획에서 확인한다.
 - 한 장치에 측정/미확인 목록은 하나다. 원본은 완료 후 일괄 전송하며 상태 보고에 원본 배열을 싣지 않는다.
 - 자동 시작/예약 측정/STOP/임의 버퍼 폐기/OTA/센서 교정/TLS 배포/재부팅 버퍼 영속화는 범위 밖이다.
 - 현행 가상 60개·1초·첫10개 안정화·startedAt=null을 유지한다. 서버 요청 시각을 측정 시작 시각으로 대입하지 않는다.
@@ -42,6 +43,9 @@ sessionId는 측정 **요청** 단계부터 존재하지만, 기존 tds_session�
 - 신규 두 토픽은 MQTT 5.0, QoS1, retain=false, Content Type=application/json, PFI=1.
 - UTF-8 JSON object, 중복 키/알 수 없는 필드/잘못된 수치/null 생략 혼용을 거절한다. 신규 본문 최대4096 bytes.
 - 신규 메시지 Message Expiry Interval은 발행 시10초. 중개 시 감소한 유효 값1..10을 수락하고 없거나0/초과는 거절한다.
+- SDK 예외(사용자 별도 승인): 고정 ESP-MQTT는 수신 Expiry를 내부 파싱 후 공개 이벤트에 전달하지 않는다.
+  ESP32의 commands 수신에서는 이 값의 직접 검사만 제외한다. 서버 발행10초/브로커 만료/장치 bootId·일회성10초
+  단조 window 검사는 유지한다. Paho 서버의 status 수신은 기존대로 Expiry1~10을 검사한다. SDK 패치/버전 변경은 없다.
 - 구독은 Retain As Published=true, Retain Handling=2. live retained도 거절한다.
 - 장치 RX는 현행 Clean Start=true/Session Expiry=0을 유지하며 commands와 preservation의 SUBACK을 모두 확인한다.
 - 서버의 신규 status 수신 연결은 Clean Start=true/Expiry=0, 기존 events 수신의 false/86400초는 유지한다.
@@ -177,7 +181,7 @@ STATE_REQUEST 실패/오프라인이고 START 발행 의도조차 기록하지 �
 
 ## 8. REST 초안과 표시 모델
 
-REST는 신규 계약 제안이며 아직 Controller가 없다. 구현 단계에서 DTO/검증/오류 형식을 확정·테스트한다.
+REST는 승인된 신규 계약이며 아직 Controller가 없다. DTO/검증/오류 형식의 구현 구체안은 실행 계획을 따른다.
 
 | 요청 | 동작 |
 |---|---|
@@ -229,5 +233,5 @@ DB가 먼저 저장돼도 장치 확인이 없으면 '서버 보존 완료·장�
 핵심 제안은 서버 UUID 발급/별도 명령 저장, 부팅+일회성10초 허가, 업무 자동 명령 재발행0회,
 15초 상태/45초 stale, MQTT/USB 제어 모드 상호 배제, 재부팅 RAM 유실 허용 유지다.
 서버 영속 명령 이력은 중복 방지·미확인 복구를 위해 이번 제어 기능에 필요하다. 장치 영속 버퍼와 구분한다.
-이 계약의 사용자 승인과 구현 계획 승인을 받기 전 코드/DDL/ACL/설정/실제 장비를 변경하지 않는다.
+이 계약은 사용자 승인받았다. 별도의 실행 계획 승인 전 코드/DDL/ACL/펌웨어/인수 환경을 변경하지 않는다.
 설계 검토는 소스/기존 계약 대조와 실패 사례 점검이다. JSON Schema/자동 테스트/실제 송수신은 아직 NOT RUN이다.

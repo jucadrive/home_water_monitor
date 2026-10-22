@@ -79,7 +79,7 @@ bool hwm_sample_simulated(hwm_session *s, uint64_t now)
 bool hwm_retry(hwm_session *s, const char *uuid, uint64_t now)
 {
     char canonical[37];
-    if (!s || s->state != HWM_MANUAL_WAIT || !normalized_uuid(uuid, canonical)
+    if (!s || s->state != HWM_MANUAL_WAIT || s->round >= HWM_COUNTER_MAX || !normalized_uuid(uuid, canonical)
         || strcmp(canonical, s->session_id) != 0) return false;
     s->round++;
     s->attempt = 0;

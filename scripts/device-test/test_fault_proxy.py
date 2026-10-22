@@ -52,6 +52,47 @@ class FramingTests(unittest.TestCase):
 
 
 class BrokerFaultTests(unittest.TestCase):
+    def wait_message(self, observer, seconds=3, predicate=None):
+        end = time.monotonic() + seconds
+        while time.monotonic() < end:
+            wire = observer.receive(0.05)
+            if wire and (predicate is None or predicate(wire)): return wire
+        return None
+
+    def test_control_expiry_and_status_loss_after_business_publish(self):
+        topic = "home/water/v1/esp32-bench/status"
+        marker = str(uuid.uuid4())
+        def own_frame(wire): return json.loads(wire["payload"]).get("probe") == marker
+        observer = Observer(seconds=20, broker_uri=self.uri, client_id=self.rx_id, topics=[topic], include_expiry=True)
+        try:
+            self.proxy.set_mode("drop-execution-status")
+            self.assertTrue(publish({"probe": marker, "phase": "before"}, topic=topic, role="device", expiry=10))
+            wire = self.wait_message(observer, predicate=own_frame)
+            self.assertIsNotNone(wire); self.assertTrue(1 <= wire["expiry"] <= 10)
+            # Deliberately incomplete JSON cannot execute on a connected physical device.
+            self.assertTrue(publish({"eventType": "START", "commandId": str(uuid.uuid4()), "sessionId": str(uuid.uuid4())},
+                                    topic="home/water/v1/esp32-bench/commands", role="server", expiry=10,
+                                    broker_uri=self.uri, client_id=self.tx_id))
+            self.assertTrue(publish({"probe": marker, "phase": "lost"}, topic=topic, role="device", expiry=10))
+            self.assertIsNone(self.wait_message(observer, 1, predicate=own_frame))
+            # A connected board's heartbeat may also be dropped; the correlated test frame must remain absent.
+            self.assertGreaterEqual(self.proxy.statuses_dropped, 1); self.assertEqual(1, len(self.proxy.control_commands))
+            self.proxy.set_mode("pass")
+            self.assertTrue(publish({"probe": marker, "phase": "recovered"}, topic=topic, role="device", expiry=10))
+            self.assertEqual({"probe": marker, "phase": "recovered"}, json.loads(self.wait_message(observer, predicate=own_frame)["payload"]))
+        finally: observer.close()
+
+    def test_result_loss_is_acked_and_pass_recovers(self):
+        self.proxy.result_rx_id = self.rx_id
+        observer = Observer(seconds=20, broker_uri=self.uri, client_id=self.rx_id)
+        try:
+            self.proxy.set_mode("drop-results")
+            self.assertTrue(self.send())
+            self.assertIsNone(self.wait_message(observer, 1)); self.assertEqual(1, self.proxy.results_dropped)
+            self.proxy.set_mode("pass")
+            self.assertTrue(self.send()); self.assertIsNotNone(self.wait_message(observer))
+        finally: observer.close()
+
     def setUp(self):
         self.tx_id = "probe-tx-" + uuid.uuid4().hex
         self.rx_id = "probe-rx-" + uuid.uuid4().hex

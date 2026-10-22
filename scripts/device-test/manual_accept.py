@@ -10,12 +10,12 @@ from server import start, stop
 from uart import Uart
 
 
-def run(case):
+def run(case, port="COM3"):
     start()
     observer, uart = Observer(), None
     test = None
     try:
-        uart = Uart()
+        uart = Uart(port)
         deadline = time.monotonic() + 40
         while time.monotonic() < deadline:
             status = uart.refresh()
@@ -95,9 +95,10 @@ def run(case):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--case", choices=["wifi-loss", "reboot"], required=True)
+    parser.add_argument("--port", default="COM3")
     args = parser.parse_args()
     try:
-        run(args.case)
+        run(args.case, args.port)
     except AcceptanceFailure as failure:
         print("PHYSICAL ACCEPTANCE NOT VERIFIED/FAILED: " + str(failure), file=sys.stderr)
         sys.exit(1)
