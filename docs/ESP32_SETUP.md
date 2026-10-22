@@ -44,7 +44,7 @@ sdkconfig·sdkconfig.local·build/는 루트 .gitignore 대상이다.
 # BOOT/EN으로 다운로드 모드 진입 후
 ./scripts/esp32.ps1 -Action Flash -ManualDownload
 # ESP-IDF export를 한 셸의 Python 사용
-python scripts/esp32-control.py watch --seconds 4 --expected-tests 31
+python scripts/esp32-control.py watch --seconds 4 --expected-tests 45
 ```
 
 테스트 이미지는 네트워크/실제 센서를 사용하지 않는다. UART 수집기는 테스트 개수·실패 0·건너뜀 0을
@@ -60,6 +60,8 @@ python scripts/esp32-control.py watch --seconds 4 --expected-tests 31
 - 사용자 입력: `firmware/esp32/wifi.local.json`에 ssid/password를 저장한다. 값은 채팅에 보내지 않는다.
 - 기본 인증은 wpa2이며 password는 UTF-8 기준 8~63 byte다. 이번 가상 데이터 인수에 한해 승인된
   개방형 망은 `authMode: "open"`, `password: ""`를 명시한다. 빈 암호만으로 개방형으로 전환하지 않는다.
+- 기본 `esp32.ps1 -Action Build -ControlMode MQTT`는 MQTT START/RETRY를 사용하고 USB 실행을 거절한다.
+  기존 USB 인수는 명시 `-ControlMode UART`로 빌드한다. 양쪽 모두 USB STATUS는 허용한다.
 - `python scripts/configure-esp32.py --samples 60`은 Git 제외된 local_config.h를 만든다.
   경계 인수는 --samples 0/1/59 빌드를 사용한다. 실제 센서 환산값이 아니다.
 - 주소가 바뀌면 `setup-device-test.py --lan-ip <새 주소> --rebind`로 **이 인수 환경만** 재바인딩한다.
@@ -67,9 +69,10 @@ python scripts/esp32-control.py watch --seconds 4 --expected-tests 31
 - 필요한 경우 관리자 PowerShell에서 `./scripts/device-test-firewall.ps1 -LanAddress <활성 LAN IPv4>`.
   해당 IP:18883/실제 서브넷만 허용하며 전역 방화벽 정책은 변경하지 않는다.
 - 암호 파일은 읽기 전용 마운트에서 private tmpfs로 복사하고 mosquitto 소유 0600으로 읽는다.
-  익명 접속은 금지, 장치 계정은 자신의 events 쓰기/preservation 읽기만 허용한다.
+  익명 접속은 금지, 장치 계정은 자신의 events/status 쓰기와 preservation/commands 읽기만 허용한다.
 - `infra/device-test/.env`, secrets.local.json, private/ 및 local_config.h는 Git에서 제외한다.
 - IDF Python에서 `scripts/device-test/server.py start`로 JDK 25의 별도 백엔드를 실행한다.
+  MQTT 제어 인수는 `start --control`로 활성화하며 REST는 loopback:18080만 사용한다.
   DB/브로커는 위 전용 환경만 사용한다. stop은 자신의 PID/생성 시각/인스턴스 식별이 맞는 프로세스만 중지한다.
 - `scripts/device-test/smoke.py`는 PC 모의 장치의 속성·DB·확인·ACL 검사다. 실제 ESP32 검증으로 표시하지 않는다.
   Paho는 새 의존성을 받지 않고 현재 backend bootJar의 기존 1.2.5를 재사용한다.

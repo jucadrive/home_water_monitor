@@ -1,5 +1,6 @@
 """Release only a matching retained bench buffer, using independently verified committed DB preservation."""
 import json
+import argparse
 import time
 from accept import require
 from bench import CACHE, credentials, publish, sql
@@ -9,9 +10,12 @@ from uart import Uart
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--port", default="COM3")
+    args = parser.parse_args()
     start()
     with FaultProxy(host=credentials()["lanIp"]):
-        uart = Uart()
+        uart = Uart(args.port)
         try:
             status = uart.refresh()
             if status.get("state") == "IDLE":

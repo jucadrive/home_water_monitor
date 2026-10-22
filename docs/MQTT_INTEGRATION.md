@@ -1,7 +1,8 @@
 # MQTT 5.0 서버 연동 실행 안내
 
 범위/검증 기록: [작업 명세](tasks/MQTT_INTEGRATION.md). 메시지 형식: [계약](MQTT_MESSAGE_CONTRACT.md).
-서버 연동은 기존 application 저장 서비스를 호출하며 펌웨어·START/명령·상태 보고는 포함하지 않는다.
+이 문서의 기존 처리 설명은 결과 수신·보존 확인 범위다. START/상태 보고의 승인 계약과 진행 상태는
+[제어 계약](MQTT_CONTROL_CONTRACT.md) 및 [실행 명세](tasks/MQTT_CONTROL_IMPLEMENTATION.md)를 따른다.
 
 ## 설정
 
@@ -16,6 +17,17 @@ Spring 외부 설정 또는 아래 환경변수로 활성화한다. 실제 비�
 | MQTT_OUTBOUND_CLIENT_ID | 필수. 수신 ID와 다른 고유 발행 ID |
 | MQTT_ALLOWED_DEVICE_IDS | 필수. 쉼표로 구분한 허용 장치 ID |
 | MQTT_USERNAME / MQTT_PASSWORD | 브로커 자격 증명. 비밀 관리 수단을 통해 주입 |
+| MQTT_CONTROL_ENABLED | 기본 false. true이면 결과 연동과 함께 REST START/RETRY·상태 보고를 활성화 |
+| MQTT_STATUS_CLIENT_ID | 제어 활성화 시 필수. 상태 수신 전용 고유 ID |
+| MQTT_CONTROL_PUBLISH_CLIENT_ID | 제어 활성화 시 필수. probe/START/RETRY 발행 전용 고유 ID |
+
+제어를 켜려면 MQTT_ENABLED=true와 서로 다른 네 client ID가 필요하다. 상태/제어 연결은 Clean Start=true,
+Session Expiry0이며 기존 결과 수신의 durable 세션과 분리한다. 기본 false에서는 새 제어 연결/API가 활성화되지 않는다.
+집 전용 인수는 `python scripts/device-test/server.py start --control`로 loopback:18080에서 실행한다.
+POST `/api/devices/{deviceId}/measurement-commands`에 UUIDv4 `Idempotency-Key`와 `{"type":"START"}` 또는
+`{"type":"RETRY","sessionId":"보관 중 UUIDv4"}`를 전달한다. 새 요청202/동일 요청200이며 Location으로 명령을 조회한다.
+GET `/api/devices/{deviceId}/status`는 관측만 반환한다. GET/화면 새로고침은 측정 시작을 요청하지 않는다.
+실제 설정·비밀번호는 로컬 비밀 설정을 사용하고 커밋하지 않는다. 운영 배포·TLS/계정 발급은 별도 승인 범위다.
 
 장치/클라이언트 ID는 `[A-Za-z0-9][A-Za-z0-9_-]{0,63}`을 따른다. 중복 서버 ID는 연결을 끊을 수 있으므로
 각 인스턴스에서 서로 달라야 한다. ssl은 JVM 신뢰 저장소와 호스트 이름 검증을 사용하며 이를 끄지 않는다.

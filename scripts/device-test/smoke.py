@@ -36,7 +36,11 @@ def main():
             raise RuntimeError("Independent DB check failed")
         if publish({"invalid": True}, role="device"):
             raise RuntimeError("Device account unexpectedly published preservation")
+        for role, suffix in (("device", "commands"), ("server", "status"), ("inspector", "commands"), ("inspector", "status")):
+            if publish({"invalid": True}, topic="home/water/v1/esp32-bench/" + suffix, role=role):
+                raise RuntimeError("Control ACL unexpectedly allowed a forbidden publication")
         print("PC smoke PASS: MQTT 5 metadata, empty result, committed DB, confirmation, device ACL denial")
+        print("Control ACL PASS: device commands/server status/inspector commands and status writes denied")
         print("Physical ESP32 network/buffer acceptance remains separate")
     finally:
         observer.close()

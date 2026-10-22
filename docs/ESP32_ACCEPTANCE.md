@@ -30,12 +30,14 @@ python scripts/setup-device-test.py --lan-ip <LAN_IP> --rebind
 # 필요 시 관리자 PowerShell. 이 인수 규칙만 해당 IP/실제 서브넷으로 이동한다.
 ./scripts/device-test-firewall.ps1 -LanAddress <LAN_IP>
 python scripts/configure-esp32.py --samples 60
-./scripts/verify-esp32.ps1 -Mode Build
+./scripts/verify-esp32.ps1 -Mode Build -ControlMode UART
 # BOOT 누름 → EN 눌렀다 놓음 → 1초 뒤 BOOT 놓음
 ./scripts/esp32.ps1 -Action Flash -ManualDownload
 ```
 
 Flash는 장치 프로그램을 교체한다. 테스트 이미지/일반 이미지/credential-free 이미지를 구분한다.
+위 기존 USB 인수는 `-ControlMode UART`로 빌드한다. 기본 MQTT 모드는 USB START/RETRY를 거절한다.
+신규 START·상태 보고 인수는 `scripts/device-test/control_accept.py`와 실행 명세를 따른다.
 실제 환경 변경 후 반드시 configure → Build → Flash를 다시 한다.
 UART는 115200/COM3, 다른 시리얼 모니터는 닫는다. 이후 IDF Python에서 다음을 실행한다.
 
@@ -65,6 +67,7 @@ python scripts/device-test/server.py start
 | proxy-puback | PUBACK/업무 확인 차단, 5회 소진·outbox 잔여 전송 없음, 같은 UUID RETRY |
 | proxy-early | PUBACK을 전달하지 않아도 실제 보존 확인이 먼저 오면 해제 |
 | proxy-negative | 5회 후 대기 중 다른 ID·잘못된 건수/JSON·PFI/Content Type·QoS/retain/초과 크기 거절, 유효 16KiB 분할 확인 수락 |
+| proxy-status-pressure | 신규 C27용. 상태 PUBACK 유실·RX 정리/재연결 중 결과 보존·해제 유지. 현재 실제 실행 전 |
 
 일반 이미지(18883) 예:
 
@@ -88,7 +91,7 @@ CONNECT 인증 값/원문 payload를 로그나 증거에 저장하지 않는다.
 # 관리자 PowerShell, 이 포트가 필요한 시나리오에만 추가
 ./scripts/device-test-firewall.ps1 -LanAddress <LAN_IP> -Port 18884
 python scripts/configure-esp32.py --samples 60 --broker-port 18884
-./scripts/verify-esp32.ps1 -Mode Build
+./scripts/verify-esp32.ps1 -Mode Build -ControlMode UART
 # 수동 다운로드 진입 후
 ./scripts/esp32.ps1 -Action Flash -ManualDownload
 python scripts/device-test/accept.py --case proxy-puback --samples 60
@@ -110,13 +113,13 @@ accept.py가 선택 LAN:18884 프록시를 띄우며 upstream은 loopback:18883�
 - 실제 힙·최소 힙은 UART STATUS로 기록한다. PC 도구 성공으로 장치 메모리 안전을 단정하지 않는다.
 - 측정 도중 실패해도 기존 미확인 버퍼를 지우거나 새 UUID로 바꾸지 않는다.
   실패한 인수를 다시 시작하려면 먼저 STATUS/같은 UUID RETRY로 처리한다.
-- TLS/제품 MQTT START·서버 sessionId 발급·센서 배선/ADC/교정은 별도 후속 승인 범위다.
+- TLS 운영 배포·센서 배선/ADC/교정은 별도 후속 승인 범위다. START/서버 UUID 발급은 별도 제어 실행 명세를 따른다.
 
 실제 수동 인수는 일반 60개 이미지/같은 망에서 다음 도구로 진행한다.
 
 ```powershell
-python scripts/device-test/manual_accept.py --case wifi-loss
-python scripts/device-test/manual_accept.py --case reboot
+python scripts/device-test/manual_accept.py --case wifi-loss --port COM4
+python scripts/device-test/manual_accept.py --case reboot --port COM4
 ```
 
 첫 도구는 최종 목록 보관/회차 소진 후 MANUAL_READY를 출력한다. 안내 시 개인 핫스팟을
@@ -136,7 +139,7 @@ python scripts/device-test/manual_accept.py --case reboot
 
 Host 도구는 기존 backend Paho 1.2.5와 IDF Python의 pyserial/psutil을 재사용한다.
 호스트 테스트는 실제 ESP32 client ID를 사용하지 않아 장치 연결을 탈취하지 않는다.
-테스트 이미지 31개는 [설치 안내](ESP32_SETUP.md)의 별도 build/flash/UART 결과 확인 절차를 따른다.
+테스트 이미지45개(기존31+제어14)는 [설치 안내](ESP32_SETUP.md)의 별도 build/flash/UART 결과 확인 절차를 따른다.
 
 종료는 server.py stop과 전용 compose stop만 사용한다. DB 볼륨을 지우지 않는다.
 시험 종료 시 관리자 셸에서 자신의 한정 규칙만 비활성화한다.

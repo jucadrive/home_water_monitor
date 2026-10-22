@@ -1,11 +1,15 @@
 """Physical UART grammar checks only. Does not start a measurement or need Wi-Fi/MQTT."""
 import sys
+import argparse
 import time
 from uart import Uart
 
 
 def main():
-    uart = Uart()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--port', default='COM3')
+    args = parser.parse_args()
+    uart = Uart(args.port)
     try:
         status = uart.refresh()
         if status.get("state") != "IDLE" or status.get("samples") != "0":

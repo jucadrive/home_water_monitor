@@ -280,6 +280,7 @@ static void frame_rejections(void)
     TEST_ASSERT_EQUAL(1, hwm_frame_feed(&frame, 3, 0, "abc", 3, true));
 }
 
+void hwm_run_command_tests(void);
 void app_main(void)
 {
     UNITY_BEGIN();
@@ -293,6 +294,7 @@ void app_main(void)
     RUN_TEST(duplicate_and_unknown_keys); RUN_TEST(invalid_json_numbers); RUN_TEST(invalid_json_syntax);
     RUN_TEST(invalid_json_semantics); RUN_TEST(empty_confirmation); RUN_TEST(payload_byte_boundary);
     RUN_TEST(fragmented_frame); RUN_TEST(frame_rejections);
+    hwm_run_command_tests();
     int failed = UNITY_END();
     while (1) {
         printf("HWM_TEST_RESULT tests=%u failed=%d ignored=%u\n", Unity.NumberOfTests, failed, Unity.TestIgnores);

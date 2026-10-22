@@ -1,19 +1,87 @@
-# Home Water Monitor 인계 — 2026-10-22
+# Home Water Monitor 인계 — 2026-10-23
 
 ## 현재 설계 — MQTT START·장치 상태 보고
-- 상태 IN_PROGRESS: 사용자가 START·상태 보고 계약 설계를 요청했다. 초안 작성·소스 대조 완료, 계약 검토 대기.
+- **Git 통합 승인(2026-10-23): 사용자가 현재 변경의 커밋·푸시·CI·PR·main 병합을 모두 명시 승인했다.**
+  아래 장비 잔여 검증/이미지 복원은 후속으로 남긴 채 현재 구현을 통합한다. 전체 기능 VERIFIED/DONE 판정은 보류한다.
+  대상 origin/codex/mqtt-control-implementation → PR → main, 커밋 초안 `feat: control ESP32 measurements and observe device status over MQTT 5`.
+  Git 결과와 CI는 원격에서 확인한다. 장비/전용 서비스는 안전 종료 상태를 유지한다.
+- **최신 체크포인트: 사용자 요청으로 현재 시험까지만 완료하고 안전 종료(2026-10-23 새벽).**
+  broker-restart/reboot/proxy-early 추가 PASS. 기존 장비13종 중10종 PASS,
+  proxy-puback/proxy-negative 미실행, 물리 Wi-Fi 단절은 공유기 Wi-Fi만 끄기 어려워 환경 제약 NOT VERIFIED.
+  신규 C27 proxy-status-pressure, 최종 Host21 재검증, MQTT 일반 이미지 복원/최신 normal 인수도 남았다.
+  현재 **보드와 build 모두 UART60/프록시18884/919744 bytes**(flash/hash PASS). 일반 MQTT 이미지로 복원하지 않았다.
+  종료 STATUS IDLE/session none/샘플0/tx_active0/rx_ready0(브로커 중지에 따른 예상 상태), min_heap107400 bytes.
+  전용 backend·브로커/DB 중지, 시험 포트18883/18884/18080/25432 listener0,
+  시험 방화벽18883/18884 규칙 Enabled=False 확인. DB 볼륨/비밀 로컬 설정/전체 미커밋·staged0 보존, diff --check PASS.
+  재개: IP/COM4·IDLE 확인 → 기존 전용 서비스와 한정 방화벽 규칙 재개 → 현재 이미지로 프록시2종+C27
+  → 최종 Host/일반 MQTT60·18883 Build/사용자 BOOT·EN 후 flash/normal → 문서·안전 종료.
+  Full build와 계약100/108은 이번 재개에서 PASS(test181은 UP-TO-DATE 재사용). 성공 검증은 새 근거 없이 반복하지 않는다.
+  자동 수정5회+별도 승인2건은 소진됐다. 추가 코드 수정이 필요한 실패는 보고 후 승인을 기다린다.
+  기능은 미완료(IN_PROGRESS/사용자 요청 중단), Git 커밋·푸시·PR·병합은 별도 승인 전 금지.
+- 상태: START·상태 보고 계약 및 전체 실행 계획 사용자 승인 완료. Phase 1~3 검증 통과, Phase 4 실제 장비 인수 중.
+- 실행 계획: [tasks/MQTT_CONTROL_IMPLEMENTATION.md](tasks/MQTT_CONTROL_IMPLEMENTATION.md).
+  Phase 1 계약/순수 판단 → Phase 2 서버/V5/REST/MQTT → Phase 3 펌웨어 → Phase 4 집 장비 인수 → Phase 5 최종 통합.
+  새 제어 발행 연결·실행기/큐 한도·V5 4개 제어/관측 테이블·장치별 잠금/복구·시험 권한을 계획에 명시했다.
+- 기준 main 62bac79(PR #8 문서 병합), 현재 codex/mqtt-control-implementation. 구현·문서 미커밋 변경이 있으며 staged0을 유지한다.
+- 집 준비: PC 유선 192.168.0.2/24, 보드 CH340 COM4/115200, STATUS IDLE/샘플0·Wi-Fi/MQTT 미연결 확인.
+  고정 ESP-IDF5.5.5/ESP-MQTT 설치·도구 검사와 로컬 Wi-Fi JSON 형식 검사 PASS. 비밀값은 출력하지 않았다.
+  집 전용 인증 브로커/DB와 LAN 한정 TCP18883 규칙을 준비했다. 기본 Java21이므로 검증 시 JDK25를 지정한다.
 - 계약: docs/MQTT_CONTROL_CONTRACT.md. 인수 조건29종·후속 Phase/변경 후보/위험: docs/tasks/MQTT_CONTROL_CONTRACT.md.
-- 제안: 서버 UUID/sessionId·별도 명령 기록·REST 멱등 키, fresh 조회 후 부팅 ID+일회성10초 실행 허가,
+- 승인 계약: 서버 UUID/sessionId·별도 명령 기록·REST 멱등 키, fresh 조회 후 부팅 ID+일회성10초 실행 허가,
   START/동일 세션 RETRY·명령 자동 재발행0회·UNKNOWN 조정, 상태15초/45초 stale·bootId/statusSeq 순서 검사.
 - 서버 보존/장치 해제/실행 수락/관측 신선도를 구분한다. MQTT와 USB 실행 제어 모드는 상호 배제한다.
   재부팅 RAM 유실 허용은 유지한다. 제품 센서/TLS 배포/장치 영속 버퍼/사무실 망 조사는 범위 밖이다.
-- 이번 변경은 설계 문서뿐이다. 새 API/V5/서버 클라이언트·ACL·펌웨어 변경은 제안이며 구현 NOT RUN/NOT VERIFIED.
-  Git/실제 소스/기존 계약/공식 MQTT 규격을 조사하고 문서·diff를 확인했다. 기존 테스트를 새 실행으로 보고하지 않는다.
+- SDK 예외 별도 승인: 고정 ESP-MQTT가 수신 Expiry를 공개하지 않아 장치의 직접 값 검사만 제외한다.
+  서버 발행 Expiry10초·브로커 만료·bootId/일회성10초 창은 유지하며 SDK 패치/버전 변경은 하지 않는다.
+- 새 실행: 제어 계약100/기존 계약108, 백엔드 전체181개(30 suite) 실패0/오류0/건너뜀0 PASS, exit0.
+  V5는 Testcontainers와 집 전용 인수 DB에서 적용/기동 확인했다. 운영/개발 DB는 사용하지 않았다.
+- 펌웨어: MQTT/UART 명시 모드·명령/상태 연결·신규 C12개 추가. CredentialFree와 Test 이미지 빌드 exit0.
+  실제 UART43개 실패0/무시0 PASS, Test 이미지196528 bytes. 현재 보드/build는 MQTT/가상60개/일반18883이다.
+  실제 이미지919488 bytes, 1MiB 여유12%, flash/hash검증 PASS. 집 Wi-Fi/MQTT 두 구독 rx_ready1 확인.
+  실제 guards+normal, unknown, release-loss PASS. REST→60개 원본→NORMAL 보존→해제, 상태 차단 UNKNOWN,
+  완료 보고 유실·서버 재시작 후 lastRelease 복구와 신규 START 차단을 확인했다.
+  실제 retry PASS: 최초5회+동일 payload RETRY1회, hash1개, 소진 후65초 무전송, 최종IDLE/0건.
+  도구의 UART 갱신 누락으로 실패한 앞선 시험의60개도 동일 세션 RETRY로 정상 보존/해제했다.
+  최신 Host21개 실패0/오류0/건너뜀0와 PC smoke·확장 ACL 거절4종 PASS. 기존 장비13종 재실행/최종 build는 아직 남았다.
+- 실제 EN 재부팅 인수 PASS: INTERRUPTED_REBOOT/UNKNOWN_AFTER_REBOOT, 빈 세션/정상 해제로 오인 없음,
+  이전 bootId 거절과 최종IDLE0건. 로컬 build는 다음 회귀용 UART0개/919600 bytes로 바꿨으나 아직 flash하지 않았다.
+- Phase 4 자동 수정5회 후 Host 격리 문제로 중단했고, 사용자가 해당 원인의 추가 수정1회만 승인했다.
+  상관값 격리 수정 후 Host21+확장 ACL smoke PASS, 추가 한도 사용1회. 이후 추가 실패 시 수정 없이 중단한다.
+  현재 최신 서버의 동시 REST START 인수 중이며, 이후 사용자 BOOT/EN 준비 후 UART0/1/59/60과 기존 장애 회귀를 진행한다.
+- 최신 동시 REST START 인수 PASS(202 하나/409 하나·실제1회 측정/60개·IDLE0건).
+  계약 대조 중 round/statusSeq 상한 누락을 보고했고 사용자가 카운터 경계 보완1회를 별도 승인했다.
+  해당 보완과 C2개를 추가해 총45개 Test Build/실제 보드 UART PASS(197392 bytes, 실패0/무시0), flash/hash PASS.
+  현재 보드는 Test45 이미지다. UART0개 일반 이미지를 다시 Build 중이며 이후 사용자 BOOT/EN 준비 후 인수를 재개한다.
+- 최신 카운터 보완 UART0개(919744 bytes) flash/hash·문법7종/CRLF/STATUS·실제 normal0개 PASS.
+  UART모드 MQTT START 거절/허가 없음·controlReady=false·최종IDLE0건 PASS. 현재 로컬 UART1개 Build 중이다.
+- 최신 UART1개 Build/flash/hash·normal1개 PASS. 현재 보드는UART1개/919744 bytes/IDLE0건, 로컬 UART59개 Build 중이다.
+- 최신 UART59개 Build/flash/hash·normal59개 PASS. 0/1/59개 모두 불완전 보존·원본/확인/해제·최종IDLE0건.
+  UART60개 Build PASS(919744 bytes), 현재 사용자 BOOT/EN 준비 후 flash 중이다. 이후 기존 장애 인수로 진행한다.
+- 최신 UART60개 Build/flash/hash·normal60개 PASS. 최신 UART normal0/1/59/60 네 종류 모두 PASS.
+  0/1/59 실제 DB의 stats_sample_count0/통계4개NULL/누락 건수60-N 별도 읽기 대조 PASS.
+  현재 보드와 build는 UART60/일반18883/919744 bytes, 기존 UART retry 인수 진행 중이다.
+- 기존 UART retry PASS(같은 payload 재전송/DB 원본·재수신 진단/해제), 현재 exhaust 회귀 진행 중이다.
+  C27 상태 송신 압력은 신규 proxy-status-pressure 인수로 구체화했다(실제 실행 전).
+- 기존 UART exhaust PASS(5회·고정버퍼·65초 무전송·지연 확인 해제), DB-outage 회귀 진행 중이다.
+  보드는 일반18883, 로컬 build는 이후용 프록시18884/UART60/919744 bytes로 다르다. 아직 프록시 이미지를 flash하지 않았다.
+  집 LAN 한정 TCP18884 규칙도 UAC 관리자 실행으로 준비했다. 종료 시18883/18884 두 시험 규칙을 비활성화한다.
+- 기존 UART db-outage PASS(전용DB 중지 중 보관/복구 후 보존·해제), 현재 broker-restart 회귀 중이다.
+  알려진 로컬 비밀번호의 Git 대상205개 파일 검사 위반0, 비밀 설정/빌드/증거의 .gitignore 제외를 확인했다(값 미출력).
+- 재개 확인: broker-restart PASS(실제 발행2회/payload hash1개·구독 복구·보존/해제·최종IDLE0건).
+  기존 장비13종 중8종 완료, 현재 일반18883/UART60 보드로 수동 Wi-Fi 단절·복구 인수 중이다.
+  이후 수동 EN 재부팅 → 프록시 이미지 flash/기존3종+C27 상태 송신 압력 → MQTT 일반 이미지 복원/최종 통합 순서다.
+- Wi-Fi 단절 회귀는 사용자가 공유기 Wi-Fi만 끄기 어렵다고 응답해 환경 제약 NOT VERIFIED로 남겼다.
+  해당 시험 프로세스만 중지하고 전용 서버를 재개했다. 보드 IDLE/0건을 확인했으며 현재 수동 EN 재부팅 회귀 중이다.
+  재개 후 제어 계약100/기존108 PASS, 최종 Full build PASS(test는 앞선181개 결과 UP-TO-DATE 재사용).
+- 기존 UART reboot PASS: 실제 EN/옛 확인 거절/자동 START 없음/서버 원본60개 일치/최종IDLE0건.
+  기존13종 중9종 PASS, Wi-Fi 단절1종 환경 제약 NOT VERIFIED, 프록시3종 미실행이다.
+  프록시18884/UART60 이미지919744 bytes 확인 완료, 사용자 다운로드 모드 준비 후 flash 대기 중이다.
 - 설계 기준 main 1aaaa06. 시작 시 HANDOFF와 ESP32 명세의 미커밋2개를 보존했다. 실제 장비 조작 없음.
 - 사용자가 집에서 이어가기 위해 설계 문서4개의 커밋·푸시·PR·main 병합을 승인했다.
-  계약 내용/동작 구현 승인은 별개이며 계속 대기한다. Git 작업 브랜치 codex/mqtt-control-contract.
+  당시 문서 Git 승인은 계약/구현 승인이 아니었다. 이후 계약과 전체 구현 계획을 별도 승인받았다.
+  당시 Git 작업 브랜치는 codex/mqtt-control-contract였다.
   이 기록은 Git 실행 전 체크포인트이며 실제 결과는 Git/PR/Actions로 확인한다.
-- 다음: 사용자 계약 검토 → 실제 변경 파일·DDL·검증을 구체화한 구현 계획 승인 → 순차 구현.
+- 다음: Phase 4 RETRY/재부팅·기존 UART 장비 회귀 → Phase 5 최종 통합·안전 종료. Git 통합은 별도 승인이다.
 
 ## 현재 진행 — ESP32 MQTT 5.0 펌웨어·장비 인수
 - 상태 DONE. 승인된 가상 데이터 펌웨어/실제 장비 인수 완료, 2026-10-22 사용자 최종 리뷰 및 전체 Git 작업 승인.

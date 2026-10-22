@@ -9,7 +9,7 @@ import time
 import uuid
 
 MAX_PACKET = 65536
-MODES = {"pass", "drop-confirmation", "drop-puback", "drop-puback-only", "reject-puback", "offline"}
+MODES = {"pass", "drop-confirmation", "drop-puback", "drop-puback-only", "reject-puback", "offline", "drop-execution-status", "drop-results", "drop-status-puback"}
 
 
 def variable_integer(data, offset=0):
@@ -83,13 +83,14 @@ def publish_parts(header, body):
 
 
 class FaultProxy:
-    def __init__(self, host="127.0.0.1", port=18884, upstream_port=18883, tx_id="hwm-esp32-bench-tx", rx_id="hwm-esp32-bench-rx"):
+    def __init__(self, host="127.0.0.1", port=18884, upstream_port=18883, tx_id="hwm-esp32-bench-tx", rx_id="hwm-esp32-bench-rx", result_rx_id="bench-server-in"):
         address = ipaddress.IPv4Address(host)
         private = any(address in ipaddress.ip_network(n) for n in ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"))
         if not address.is_loopback and not private:
             raise ValueError("Proxy listener must be loopback or an explicitly selected private LAN IP")
         self.host, self.port, self.upstream_port = host, port, upstream_port
         self.tx_id, self.rx_id = tx_id, rx_id
+        self.result_rx_id = result_rx_id
         self.mode = "pass"
         self.stop = threading.Event()
         self.lock = threading.Lock()
@@ -100,6 +101,11 @@ class FaultProxy:
         self.rx_connections = 0
         self.tx_connections = 0
         self.listener = None
+        self.control_dispatched = False
+        self.statuses_dropped = 0
+        self.control_commands = []
+        self.results_dropped = 0
+        self.status_pubacks_dropped = 0
 
     def set_mode(self, mode):
         if mode not in MODES:
@@ -177,10 +183,34 @@ class FaultProxy:
                                 session = str(uuid.UUID(json.loads(payload)["sessionId"]))
                             except (ValueError, TypeError, KeyError):
                                 pass
+                            try:
+                                control = json.loads(payload)
+                                if control.get("eventType") in ("START", "RETRY"):
+                                    self.control_dispatched = True
+                                    self.control_commands.append({"commandId": control["commandId"], "duplicate": bool(packet[0] & 8)})
+                                    self.control_commands = self.control_commands[-100:]
+                            except (ValueError, TypeError, KeyError, AttributeError):
+                                pass
                             with self.lock:
                                 self.publications.append({"time": time.monotonic(), "sha256": hashlib.sha256(payload).hexdigest(),
                                                           "sessionId": session, "connection": tx_connection, "duplicate": bool(packet[0] & 8)})
                                 self.publications = self.publications[-100:]
+                        if (source is upstream and kind == 3 and client_id == self.rx_id
+                                and self.mode == "drop-execution-status" and self.control_dispatched):
+                            packet_id, _ = publish_parts(packet[0], body)
+                            if ((packet[0] >> 1) & 3) != 1: raise ValueError("Status QoS must be 1")
+                            upstream.sendall(b"\x40\x02" + packet_id)
+                            with self.lock: self.statuses_dropped += 1
+                            continue
+                        if source is upstream and kind == 3 and client_id == self.result_rx_id and self.mode == "drop-results":
+                            packet_id, _ = publish_parts(packet[0], body)
+                            if ((packet[0] >> 1) & 3) != 1: raise ValueError("Result QoS must be 1")
+                            upstream.sendall(b"\x40\x02" + packet_id)
+                            with self.lock: self.results_dropped += 1
+                            continue
+                        if source is upstream and kind == 4 and client_id == self.rx_id and self.mode == "drop-status-puback":
+                            with self.lock: self.status_pubacks_dropped += 1
+                            continue
                         if source is upstream and kind == 4 and client_id == self.tx_id:
                             if self.mode in ("drop-puback", "drop-puback-only"):
                                 with self.lock: self.pubacks_dropped += 1

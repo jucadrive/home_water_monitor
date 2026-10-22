@@ -89,12 +89,14 @@ def mqtt_environment(role):
 
 
 class Observer:
-    def __init__(self, seconds=600, *, broker_uri=None, client_id=None):
+    def __init__(self, seconds=600, *, broker_uri=None, client_id=None, topics=None, include_expiry=False):
         self.lines = queue.Queue(maxsize=256)
         env = mqtt_environment("inspector")
+        if include_expiry: env["HWM_TEST_INCLUDE_EXPIRY"] = "1"
         if broker_uri: env["HWM_TEST_BROKER_URI"] = broker_uri
         if client_id: env["HWM_TEST_CLIENT_ID"] = client_id
-        self.process = subprocess.Popen(mqtt_command() + ["listen", str(seconds), "home/water/v1/esp32-bench/events", "home/water/v1/esp32-bench/preservation"],
+        topics = topics or ["home/water/v1/esp32-bench/events", "home/water/v1/esp32-bench/preservation"]
+        self.process = subprocess.Popen(mqtt_command() + ["listen", str(seconds), *topics],
                                         env=env, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, creationflags=FLAGS)
         self.overflow = False
         def read():
@@ -126,11 +128,12 @@ class Observer:
         except queue.Empty:
             return None
         parts = line.split("\t")
-        if len(parts) != 7 or parts[0] != "MESSAGE":
+        if len(parts) not in (7, 8) or parts[0] != "MESSAGE":
             return None
         return {"received": received, "topic": base64.b64decode(parts[1]).decode("utf-8"), "qos": int(parts[2]),
                 "retained": parts[3] == "true", "pfi": parts[4] == "true", "contentType": base64.b64decode(parts[5]).decode("utf-8"),
-                "payload": base64.b64decode(parts[6])}
+                "payload": base64.b64decode(parts[6]),
+                "expiry": int(parts[7]) if len(parts) == 8 and parts[7] != "null" else None}
 
     def close(self):
         if self.process.poll() is None:
@@ -140,13 +143,14 @@ class Observer:
         self.process.stdout.close()
 
 
-def publish(payload, *, topic="home/water/v1/esp32-bench/preservation", role="server", qos=1, retained=False, pfi="true", content_type="application/json", broker_uri=None, client_id=None):
+def publish(payload, *, topic="home/water/v1/esp32-bench/preservation", role="server", qos=1, retained=False, pfi="true", content_type="application/json", broker_uri=None, client_id=None, expiry=None):
     CACHE.mkdir(parents=True, exist_ok=True)
     file = CACHE / "publish-payload.json"
     file.write_bytes(payload if isinstance(payload, bytes) else json.dumps(payload, separators=(",", ":")).encode("utf-8"))
     env = mqtt_environment(role)
     if broker_uri: env["HWM_TEST_BROKER_URI"] = broker_uri
     if client_id: env["HWM_TEST_CLIENT_ID"] = client_id
-    result = subprocess.run(mqtt_command() + ["publish", topic, str(file), str(qos), str(retained).lower(), pfi, content_type],
+    expiry_args = [] if expiry is None else [str(expiry)]
+    result = subprocess.run(mqtt_command() + ["publish", topic, str(file), str(qos), str(retained).lower(), pfi, content_type, *expiry_args],
                             env=env, capture_output=True, text=True, timeout=20, creationflags=FLAGS)
     return result.returncode == 0 and "PUBLISHED" in result.stdout
