@@ -1,5 +1,20 @@
 # Home Water Monitor 인계 — 2026-10-22
 
+## 현재 설계 — MQTT START·장치 상태 보고
+- 상태 IN_PROGRESS: 사용자가 START·상태 보고 계약 설계를 요청했다. 초안 작성·소스 대조 완료, 계약 검토 대기.
+- 계약: docs/MQTT_CONTROL_CONTRACT.md. 인수 조건29종·후속 Phase/변경 후보/위험: docs/tasks/MQTT_CONTROL_CONTRACT.md.
+- 제안: 서버 UUID/sessionId·별도 명령 기록·REST 멱등 키, fresh 조회 후 부팅 ID+일회성10초 실행 허가,
+  START/동일 세션 RETRY·명령 자동 재발행0회·UNKNOWN 조정, 상태15초/45초 stale·bootId/statusSeq 순서 검사.
+- 서버 보존/장치 해제/실행 수락/관측 신선도를 구분한다. MQTT와 USB 실행 제어 모드는 상호 배제한다.
+  재부팅 RAM 유실 허용은 유지한다. 제품 센서/TLS 배포/장치 영속 버퍼/사무실 망 조사는 범위 밖이다.
+- 이번 변경은 설계 문서뿐이다. 새 API/V5/서버 클라이언트·ACL·펌웨어 변경은 제안이며 구현 NOT RUN/NOT VERIFIED.
+  Git/실제 소스/기존 계약/공식 MQTT 규격을 조사하고 문서·diff를 확인했다. 기존 테스트를 새 실행으로 보고하지 않는다.
+- 설계 기준 main 1aaaa06. 시작 시 HANDOFF와 ESP32 명세의 미커밋2개를 보존했다. 실제 장비 조작 없음.
+- 사용자가 집에서 이어가기 위해 설계 문서4개의 커밋·푸시·PR·main 병합을 승인했다.
+  계약 내용/동작 구현 승인은 별개이며 계속 대기한다. Git 작업 브랜치 codex/mqtt-control-contract.
+  이 기록은 Git 실행 전 체크포인트이며 실제 결과는 Git/PR/Actions로 확인한다.
+- 다음: 사용자 계약 검토 → 실제 변경 파일·DDL·검증을 구체화한 구현 계획 승인 → 순차 구현.
+
 ## 현재 진행 — ESP32 MQTT 5.0 펌웨어·장비 인수
 - 상태 DONE. 승인된 가상 데이터 펌웨어/실제 장비 인수 완료, 2026-10-22 사용자 최종 리뷰 및 전체 Git 작업 승인.
 - 기준 main d2332a0(PR #6), 브랜치 codex/esp32-firmware-integration. 기존 미커밋 계획 문서를 보존했다.
@@ -35,7 +50,11 @@
 - 남은 제품 기능은 별도 승인 범위: 실제 센서/ADC/교정, 제품 MQTT START·서버 sessionId 발급,
   TLS/운영 배포·영속 명령 이력·재부팅 시 미확인 원본 영속 보존.
 - 커밋 초안: feat: add ESP32 MQTT 5 firmware and device acceptance harness.
-- 다음: 승인된 Git 통합을 docs/GIT_WORKFLOW.md에 따라 진행한다. 사무실 망 지연 원인 조사는 후속 작업이다.
+- Git 통합 완료: PR #7, 구현 커밋9b458fa, main 병합1aaaa06. push/PR/병합 후 CI 모두 성공,
+  로컬 main 동기화·작업 트리 clean 확인. 병합 CI: https://github.com/jucadrive/home_water_monitor/actions/runs/39743611691.
+- 사무실 망 지연 원인 조사는 사용자 지시로 후속 범위에서 제외했다. 근본 원인 미확정 기록은 유지한다.
+- 다음 제안: 제품 MQTT START·서버 sessionId 발급·장치 실행 확인/상태 보고 계약을 먼저 설계한다.
+  새 기능 계획 승인 전 구현하지 않는다.
 
 ## 현재 진행 — MQTT 5.0 실제 서버 연동
 - 상태 DONE, 2026-10-22 사용자 최종 리뷰 승인. [작업 명세](tasks/MQTT_INTEGRATION.md) · [실행 안내](MQTT_INTEGRATION.md).
