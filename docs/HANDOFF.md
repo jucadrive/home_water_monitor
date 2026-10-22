@@ -1,5 +1,42 @@
 # Home Water Monitor 인계 — 2026-10-22
 
+## 현재 진행 — ESP32 MQTT 5.0 펌웨어·장비 인수
+- 상태 DONE. 승인된 가상 데이터 펌웨어/실제 장비 인수 완료, 2026-10-22 사용자 최종 리뷰 및 전체 Git 작업 승인.
+- 기준 main d2332a0(PR #6), 브랜치 codex/esp32-firmware-integration. 기존 미커밋 계획 문서를 보존했다.
+  사용자가 커밋·푸시·PR 생성·리뷰·main 병합·CI 확인과 로컬 동기화를 승인했다.
+  이 Git 기록은 실행 전 체크포인트다. 실제 결과는 Git 로그와 GitHub PR/Actions로 확인한다.
+- 명세/승인/실패와 재검증 이력: docs/tasks/ESP32_FIRMWARE_INTEGRATION.md.
+  설치/실행: docs/ESP32_SETUP.md, docs/ESP32_ACCEPTANCE.md. USB 계약: docs/DEVICE_CONTROL_CONTRACT.md.
+- ESP-IDF 5.5.5/고정 ESP-MQTT, 실제 ESP32-D0WD-V3 rev3.1/40MHz/flash4MB/CH340 COM3.
+  자동 다운로드 대신 BOOT/EN 후 no_reset 수동 flash를 사용한다. 마지막 flash/hash 검증 PASS.
+- 마지막 보드와 로컬 build: 일반 MQTT 18883/가상 60개/개인 WPA2 2.4GHz 핫스팟, 913264 bytes.
+  1MiB app partition 여유13%, HWM_TEST_IMAGE=OFF/HWM_CREDENTIAL_FREE=OFF. SSID/계정/바이너리는 Git 제외.
+- 독립 RX/시도별 TX·고정 최종 목록·유한5회/지터·동일 UUID RETRY·유효 보존 확인 후 삭제 구현.
+  USB START 시 PC가 UUIDv4를 발급하며 부팅/복구/재전송이 새 세션을 만들지 않는다.
+- 이번 기능 작업 누적 실제 장비 인수13종 PASS: normal 0/1/59/60, retry, exhaust, db-outage,
+  broker-restart, proxy-puback, proxy-early, proxy-negative, wifi-loss, reboot. 모든 증거에서 최종 IDLE/0건 확인.
+  원본 전체/동일 payload hash·MQTT 속성·DB 커밋/재수신·실제 UART 해제를 교차 확인했다.
+- proxy-negative: 핫스팟에서 5연결/5발행·동일 hash1·MQTT DUP 없음·65초 추가 무전송,
+  부정13종에서 보관/유효16KiB 분할 확인 후 해제/같은16KiB 중복·완료 UUID START 거절 PASS.
+- wifi-loss: 실제 핫스팟 OFF/ON 중 wifi_up=0·같은 UUID/60개 보관, 복구 후 RETRY 6번째 발행도
+  동일 hash1, DB 보존 확인 후 해제 PASS. reboot: 미확인60개 상태의 EN 부팅 로그/IDLE0/자동 START 없음,
+  이전 세션 확인 거절·서버 원본 내용 보존 PASS. EN/전원에 따른 RAM 유실은 승인된 MVP 제약이다.
+- Host 최신19개/실패·오류·건너뜀0 및 PC smoke PASS. PS AST/Python 구문/diff 검사 PASS.
+  실제 ESP32 순수 상태31개/실패·건너뜀0·UART 부정7종은 앞선 직접 실행 결과를 재사용(순수 소스 변경 없음).
+  backend Full158/26클래스·계약108은 이번 기능 초반 성공 결과를 재사용(backend/계약/V1~V4 변경 없음).
+  credential-free160656 bytes 빌드는 앞선 성공 기록이며 최종 일반 이미지와 구분한다. Lint/아키텍처 자동 검사 MISSING.
+- Phase4 실패 기반 자동 수정은5회로 한도 준수. 실패를 삭제/조건을 약화하지 않고 기록·수정·재검증했다.
+  사무실 개방형 망의 지연 전달/송신 실패 근본 원인은 미확정. 최종 경계/부정/수동 인수는 개인 핫스팟이다.
+  첫 핫스팟 AP 미발견은 실제5GHz 송출 때문이었고 사용자2.4GHz 전용/OFF·ON 후 해결했다.
+- 안전 종료 확인: 전용 백엔드·브로커/DB 컨테이너 중지, 18883/18884/18080/25432 listener0,
+  자신의 한정 방화벽 규칙2개 비활성화. 다른 서비스/DB·볼륨·로컬 설정·기존 변경은 보존했다.
+  장치는 IDLE이며 시험 서비스를 다시 열기 전 rx_ready=0은 예상 상태다. 활성 IP는 재개할 때 다시 확인한다.
+- Git 후보165개 실제 비밀값/SSID 일치0. 새 Java1개85줄, 200줄 초과 없음. 이 검사는 포괄적 보안 보증이 아니다.
+- 남은 제품 기능은 별도 승인 범위: 실제 센서/ADC/교정, 제품 MQTT START·서버 sessionId 발급,
+  TLS/운영 배포·영속 명령 이력·재부팅 시 미확인 원본 영속 보존.
+- 커밋 초안: feat: add ESP32 MQTT 5 firmware and device acceptance harness.
+- 다음: 승인된 Git 통합을 docs/GIT_WORKFLOW.md에 따라 진행한다. 사무실 망 지연 원인 조사는 후속 작업이다.
+
 ## 현재 진행 — MQTT 5.0 실제 서버 연동
 - 상태 DONE, 2026-10-22 사용자 최종 리뷰 승인. [작업 명세](tasks/MQTT_INTEGRATION.md) · [실행 안내](MQTT_INTEGRATION.md).
 - 사용자가 커밋·푸시·소스 CI·PR·main 병합·병합 후 CI 및 로컬 동기화를 승인했다.

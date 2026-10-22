@@ -1,0 +1,35 @@
+name: home-water-monitor-device-test
+services:
+  broker:
+    image: eclipse-mosquitto:2.0.22
+    # Copy the root-readable Windows bind into a private tmpfs file before dropping privileges.
+    entrypoint: ["/bin/sh", "-ec"]
+    command: ["cp /run/hwm/passwords /tmp/hwm-passwords && chown mosquitto:mosquitto /tmp/hwm-passwords && chmod 600 /tmp/hwm-passwords && exec mosquitto -c /mosquitto/config/mosquitto.conf"]
+    tmpfs:
+      - /tmp
+    ports:
+      - "127.0.0.1:18883:1883"
+      - "${LAN_BIND_IP:?LAN_BIND_IP required}:18883:1883"
+    volumes:
+      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - ./acl:/mosquitto/config/acl:ro
+      - ./private/passwords:/run/hwm/passwords:ro
+    restart: "no"
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: hwm_device_test
+      POSTGRES_USER: hwm_device_test
+      POSTGRES_PASSWORD: "${DB_PASSWORD:?DB_PASSWORD required}"
+    ports:
+      - "127.0.0.1:25432:5432"
+    volumes:
+      - device_test_postgres:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "hwm_device_test", "-d", "hwm_device_test"]
+      interval: 2s
+      timeout: 2s
+      retries: 20
+    restart: "no"
+volumes:
+  device_test_postgres:
