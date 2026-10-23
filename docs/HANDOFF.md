@@ -1,5 +1,73 @@
 # Home Water Monitor 인계 — 2026-10-23
 
+## 최신 체크포인트 — 사무실 전환 후 잔여 인수·안전 종료
+- 기존 승인 Phase 4/5 중 남았던 proxy-puback/proxy-negative/C27/Host/일반 MQTT 복원·normal을 완료했다.
+  2026-10-23 사용자가 물리 Wi-Fi 단절 시험을 생략하고 넘어가도록 명시했다.
+  해당 시험은 NOT VERIFIED/사용자 승인 제외이며 PASS로 바꾸지 않는다.
+  변경된 인수 범위의 START·상태 보고/가상 데이터 구현은 검증을 통과했고,
+  사용자가 완료 범위 보고를 수락하고 최종 리뷰 후 Git 진행을 승인했다. 현재 단계 DONE.
+- 실제 Git: codex/mqtt-control-acceptance-resume, 기준0f31ccd(PR #9 병합), 문서2개 unstaged/staged0.
+  소스 수정/새 커밋/푸시/PR/병합 없음. 아래 과거 기록의 미실행 항목은 이 체크포인트로 갱신한다.
+- 실제 신규 PASS: proxy-puback(5회+RETRY1회/hash1/65초 무전송), proxy-negative(부정13종/유효16KiB/중복 guard),
+  C27 proxy-status-pressure(상태PUBACK6개 차단/RX7연결/장애 중 보존·해제/상태수신 복구).
+- Host21개 실패0/오류0/건너뜀0/PC smoke·확장 제어 ACL exit0/PASS. JDK25 최신 bootJar exit0/PASS.
+  기존 backend181개·계약100/108·실제C45개 결과는 재사용이며 이번 새 실행이라고 주장하지 않는다.
+- 사용자 요청으로 개인 핫스팟에서 사무실 WPA2 Wi-Fi로 전환했다. PC192.168.0.38/24, 보드COM5.
+  로컬 설정 형식 검증/전용 환경 rebind/한정18883 규칙 갱신 후 일반 MQTT60/18883 Build919616 bytes,
+  파티션 여유12%, 사용자 BOOT/EN 후 flash/hash exit0/PASS. 보드/build 모두 이 일반 이미지다.
+- 실제 control normal exit0/PASS: 동시START202 하나/409 하나, 멱등·충돌·USB모드 거절,
+  실제 결과1회/원본60개 전체 필드 DB 일치/ACCEPTED·NORMAL·RELEASE_CONFIRMED/FRESH/최종IDLE0건.
+- 안전 종료: 전용 backend/브로커/DB 중지,18883/18884/18080/25432 listener0,
+  시험 방화벽18883/18884 Enabled=False. COM5 IDLE/session none/samples0/tx_active0/rx_ready0,
+  min_heap108780 bytes. DB 볼륨/비밀 로컬 설정/다른 서비스 보존. diff --check PASS.
+- 추가 코드 수정0회. 기존 자동 수정 한도 소진 상태 유지. 신규 Java/Kotlin 파일 없음.
+- 4단계 판정: 1 START·상태 보고 계약 설계 완료/기승인, 2 백엔드·펌웨어 가상 데이터 구현·인수 DONE,
+  3 실제 TDS 센서 연결 TODO, 4 조회·제어 화면 TODO. 현재 펌웨어는 hwm_sample_simulated를 호출한다.
+  START/RETRY·장치/명령 상태 REST는 있지만 화면과 측정 결과·추세 조회 기능은 구현하지 않았다.
+- Git 후속 승인: 사용자가 최종 리뷰 후 Git 진행을 요청했다. 재개 문서2개를 검토한 뒤
+  커밋·푸시·CI·PR 리뷰/병합·main 동기화를 진행한다. 구현 소스는 PR #9로 이미 main에 통합됐다.
+  이후 실제 센서 모델·회로·교정 조건을 확인하고 3단계 계획을 수립해 최초 승인을 받는다.
+  공용 사무실 AP 단절/사무실 망 원인 조사/추가 코드 수정은 진행하지 않는다.
+- 커밋 초안: docs: record resumed MQTT device acceptance and safe shutdown
+
+## 재개 체크포인트 — 2026-10-23 사무실
+- 사용자가 새벽 중단 지점부터 재개를 요청했다. 기존 승인 계획 Phase 4/5의 잔여 인수를 이어간다.
+- 실제 Git: PR #9 병합 main `0f31ccd`, 시작 작업 트리 clean. 재개 브랜치 `codex/mqtt-control-acceptance-resume`.
+  아래 이전 브랜치/미커밋/Git 승인 대기 문구는 과거 기록이며 현재 Git 상태가 아니다.
+- 현재 PC/로컬 산출물은 집 체크포인트와 다르다. 최초 유선192.168.1.14/COM5,
+  STATUS IDLE/session none/samples0/wifi_up0/rx_ready0. 로컬 이전 이미지913264 bytes, 이전 backend JAR 확인.
+- 사용자가 개인2.4GHz 핫스팟 사용과 PC 연결·로컬 Wi-Fi 설정 완료를 확인했다.
+  현재 Wi-Fi IPv4는10.206.235.177/24. 기존 전용 DB/브로커를 해당 주소로 rebind/start했다.
+- 기존 시험 방화벽18883/18884는 일반 실행 권한 거절 후 UAC 관리자 실행으로 갱신,
+  두 규칙 Enabled=True를 확인했다. 다른 서비스/방화벽 정책/DB 볼륨은 변경하지 않았다.
+- 최신 소스 JDK25 bootJar exit0/PASS(compileJava/processResources/resolveMainClassName/bootJar 실제 실행).
+  전체 테스트 재실행 결과가 아니며, 기존181개 성공 증거와 구분한다.
+- 최신 UART60/프록시18884 펌웨어 Build exit0/PASS(919744 bytes/partition 여유12%).
+  최종 Host21개 실패0/오류0/건너뜀0, PC smoke/확장 제어 ACL 검사 exit0/PASS.
+  사용자 다운로드 모드 준비 후 COM5 flash/hash exit0/PASS. 보드/build 모두 최신 UART60/프록시18884.
+  실제 proxy-puback exit0/PASS: 5회 소진/65초 추가 무전송/동일 세션 RETRY/DB 원본·재수신/최종 해제.
+  실제 proxy-negative exit0/PASS: 부정13종 거절/유효16KiB 분할 확인·중복 guard/최종IDLE0건.
+  신규 C27 proxy-status-pressure exit0/PASS: 상태PUBACK6개 차단/RX7연결,
+  장애 중 결과1회 보존·해제/상태수신 복구/최종IDLE0건.
+  이전 로컬 인수 JSON은 새벽 집 인수 증거로 사용하지 않는다.
+- 사용자가 다른 업무를 위해 개인 핫스팟 대신 PC·보드를 사무실 Wi-Fi로 바꾸도록 요청했다.
+  진행 중 C27 세션의 보존·해제를 마친 뒤 새 시험 없이 안전 종료했다.
+  전용 backend/브로커/DB 중지, 시험4포트 listener0, 방화벽18883/18884 Enabled=False 확인.
+  COM5 STATUS IDLE/session none/samples0/tx_active0/rx_ready0/min_heap104500 bytes.
+  현재 보드와 build는 핫스팟용 최신 UART60/프록시18884다. Wi-Fi 전환만으로 보드 설정이 바뀌지 않는다.
+- 사무실 전환 재개: 사용자가 wifi.local.json 수정 완료/재개를 요청했다.
+  PC Wi-Fi192.168.0.38/24/COM5, 보드 IDLE/session none/samples0 확인.
+  로컬 Wi-Fi WPA2 형식 PASS(값 미출력), 전용 DB·브로커 rebind/start PASS.
+  UAC 관리자 실행으로18883 규칙만 갱신·활성화(True),18884=False 확인.
+  일반 MQTT60/18883 최신 이미지 Build exit0/PASS(919616 bytes/파티션 여유12%).
+  사용자 다운로드 모드 준비 후 COM5 flash/hash exit0/PASS. 보드/build 모두 사무실용 일반 MQTT60/18883.
+  첫 STATUS는 wifi_up0/reason4/rx_ready0였으나 추가20초 UART 관찰에서 HWM_RX_READY mqtt=5 확인.
+  설정/소스 수정 없이 연결됐다. 실제 control_accept.py --case normal --port COM5 exit0/PASS.
+- 사무실 환경 rebind/일반 MQTT60 복원·normal/안전 종료까지 완료했다. 결과는 최상단 최신 체크포인트 참조.
+  물리 Wi-Fi 단절은 아직 NOT VERIFIED. 공용 사무실 AP를 끄지 않으며 사무실 망 지연 원인 조사는 범위 밖이다.
+  추가 코드 수정 한도 소진 상태 유지. 수정이 필요한 실패는 보고 후 승인 대기한다.
+  이번 재개 변경의 커밋·푸시·PR·병합은 실행하지 않는다.
+
 ## 현재 설계 — MQTT START·장치 상태 보고
 - **Git 통합 승인(2026-10-23): 사용자가 현재 변경의 커밋·푸시·CI·PR·main 병합을 모두 명시 승인했다.**
   아래 장비 잔여 검증/이미지 복원은 후속으로 남긴 채 현재 구현을 통합한다. 전체 기능 VERIFIED/DONE 판정은 보류한다.

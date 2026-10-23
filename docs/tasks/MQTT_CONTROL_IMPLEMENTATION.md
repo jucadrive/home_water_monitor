@@ -1,11 +1,12 @@
 # START·장치 상태 보고 실행 계획
 
-상태: IN_PROGRESS — 전체 실행 계획 승인, 사용자 요청으로 Phase 4 현재 시험까지만 마치고 안전 종료.
-Git 통합: 2026-10-23 사용자 현재 변경 커밋·푸시·CI·PR·main 병합 전체 승인. 잔여 장비 인수는 후속이며 전체 VERIFIED/DONE 아님.
+상태: DONE — 사용자 승인 제외를 반영한 인수 범위 통과, 완료 범위 보고 수락 및 최종 리뷰 후 Git 진행 승인.
+2026-10-23 사용자가 물리 Wi-Fi 단절 시험 생략을 명시했다. 해당 시험은 NOT VERIFIED/승인 제외이며 PASS 아님.
+Git 통합: 구현은 PR #9 병합 완료. 2026-10-23 재개 인수 결과 문서의 최종 리뷰 후 Git 진행도 사용자 승인.
 진행: Phase 1 계약100/기존108 PASS, Phase 2 전체 backend181 PASS, Phase 3 실제 C45개 PASS.
-최신 체크포인트(2026-10-23 새벽): 기존 UART13종 중10종 PASS. proxy-puback/proxy-negative 미실행,
-물리 Wi-Fi 단절 환경 제약 NOT VERIFIED. 신규 proxy-status-pressure·최종 Host21·일반 MQTT 이미지 복원/normal 남음.
-보드/build 모두 UART60·프록시18884·919744 bytes. 서비스/시험 규칙 종료, 보드 IDLE0건, staged0 보존.
+최신 체크포인트(2026-10-23 사무실): 기존 UART13종 중12종 PASS, 물리 Wi-Fi 단절 환경 제약 NOT VERIFIED.
+proxy-puback/proxy-negative·신규C27·최종Host21·일반MQTT 복원/실제control normal PASS.
+보드/build 모두 사무실WPA2·MQTT60·일반18883·919616 bytes. 서비스/시험 규칙 종료, COM5 IDLE0건, staged0.
 SDK 예외 승인: 사용자 요청으로 고정 ESP-MQTT 유지·장치 수신 Expiry 직접 검사만 제외한다.
 서버/브로커 Expiry와 bootId/일회성10초 장치 만료는 유지한다. 실제 공개 헤더/파싱 코드로 제약을 확인했다.
 2026-10-22 사용자가 MQTT_CONTROL_CONTRACT.md의 계약을 승인하고 실행 계획 제시를 요청했다.
@@ -282,7 +283,43 @@ V1~V4는 수정하지 않는다. UUID는 DB uuid, 시각은 timestamptz, 제어 
   종료 COM4 STATUS IDLE/샘플0/tx_active0/rx_ready0, min_heap107400 bytes. DB 볼륨/로컬 설정 보존.
   Git staged0·diff --check PASS. 남은 시험과 재개 순서는 HANDOFF 최신 체크포인트를 따른다.
 
-## 11. 인수 증거 매핑 — 진행 중
+## 재개 Phase Result — 2026-10-23 사무실
+- 사용자 재개 요청에 따라 기존 Phase 4/5 잔여 인수만 수행한다. 추가 코드 수정 승인은 없다.
+- 기준 main0f31ccd(PR #9), 시작 clean, 브랜치 codex/mqtt-control-acceptance-resume.
+- 개인2.4GHz 핫스팟/PC 연결·로컬 Wi-Fi 설정 완료를 사용자 확인. PC10.206.235.177/24/COM5.
+- 이전 로컬 이미지913264 bytes와 JAR는 최신 집 인수 산출물이 아니므로 최신 소스로 재빌드했다.
+- JDK25 bootJar exit0/PASS. UART60/프록시18884 Build919744 bytes/여유12%, COM5 flash/hash exit0/PASS.
+- Host21개 실패0/오류0/건너뜀0, PC smoke·확장 제어 ACL exit0/PASS.
+- proxy-puback exit0/PASS: 5회 소진/65초 추가 무전송/같은 UUID RETRY, 총6회 payload hash1,
+  원본·재수신 진단·유효 확인·해제·최종IDLE0건. 증거: .tools/device-test/accept-proxy-puback-60.json.
+- proxy-negative exit0/PASS: 부정13종 거절/유효16KiB 분할 확인/중복·완료 UUID guard/최종IDLE0건.
+- C27 proxy-status-pressure exit0/PASS: 상태PUBACK6개 차단/RX7연결,
+  장애 중 결과1회 보존·해제/상태수신 복구/최종IDLE0건, min_heap104500 bytes.
+- 물리 Wi-Fi 단절은 아직 NOT VERIFIED. 일반 MQTT 이미지 복원·normal 결과는 아래 사무실 전환 기록 참조.
+- 소스 수정0회, 현재 문서만 변경. 기존181개/계약100·108 성공 결과는 재실행으로 표기하지 않는다.
+- 사용자가 PC·보드를 사무실 Wi-Fi로 바꾸도록 요청해 C27 완료 후 새 시험 없이 안전 종료했다.
+  전용 backend/DB/브로커 중지/시험4포트 listener0/시험 규칙18883·18884 False,
+  COM5 IDLE/session none/samples0/tx_active0/rx_ready0 확인. DB 볼륨·비밀 설정 보존.
+  다음은 PC 연결·로컬 설정 갱신/새IP 확인 후 일반 MQTT 이미지 재빌드·flash·normal이다.
+  공용 AP 단절/사무실 망 장애 원인 조사는 수행하지 않는다. 커밋·푸시·PR·병합은 실행하지 않는다.
+- 사무실 전환: 사용자 로컬 Wi-Fi 수정 완료 후 PC192.168.0.38/24/COM5·IDLE0건 재확인,
+  WPA2 형식 PASS/전용 환경 rebind/18883 한정 규칙 활성화. 일반 MQTT60/18883 Build919616 bytes/여유12%,
+  BOOT/EN 후 flash/hash exit0/PASS. 첫 STATUS 연결 전이었으나 추가20초 UART 관찰 중 RX_READY 확인.
+- control_accept.py --case normal --port COM5 exit0/PASS: 동시START202 하나/409 하나·멱등/충돌,
+  MQTT 중복/충돌·USB실행 거절/원본60개 MQTT-DB 전체필드 일치/결과발행1회/최종IDLE0건,
+  ACCEPTED/NORMAL/RELEASE_CONFIRMED/FRESH. 증거: .tools/device-test/control-normal.json.
+- 최종 안전 종료: 전용backend/DB/브로커 중지/시험4포트 listener0/두 시험규칙False,
+  COM5 IDLE/session none/samples0/tx_active0/rx_ready0/min_heap108780 bytes.
+  보드/build 모두 사무실용 일반MQTT 이미지로 복원 완료. 추가 소스 수정0회, 문서2개만 변경.
+- 사용자 범위 조정: 물리 Wi-Fi 단절 시험 생략을 명시 승인했다. 재실행하지 않으며 NOT VERIFIED를 유지한다.
+  나머지 승인 인수 조건 통과 및 사용자 완료 범위 수락/최종 리뷰 후 Git 진행 승인으로 현재 기능 DONE.
+- 최종 리뷰: 로컬 인수 JSON4개와 문서의 원본60개/해제/IDLE0건 대조 PASS, 변경은 문서2개뿐.
+  과거 전체181개·계약100/108·C45개는 재사용하고 새 실행과 구분했다.
+  문서 상단의 과거 미완료/Git 승인 대기 표현을 현재 상태와 일치시켰다. 코드 변경이 없어 빌드 재실행 없음.
+- 다음: 승인된 문서 Git 통합과 CI 확인, 이후 실제 센서 연결의 조사·계획. 커밋 초안:
+  docs: record resumed MQTT device acceptance and safe shutdown.
+
+## 11. 인수 증거 매핑 — 사용자 승인 제외 반영 완료
 
 | 조건 | 현재 증거와 남은 부분 |
 |---|---|
@@ -292,12 +329,13 @@ V1~V4는 수정하지 않는다. UUID는 DB uuid, 시각은 timestamptz, 제어 
 | C11~C15 | 실제 UNKNOWN/신규 START 차단/후속 복구와 MQTT 모의 장치·예약/dispatch 복구 테스트 PASS |
 | C16~C18 | 실제 retry:5회/65초 무전송/동일payload/한회차/해제 후 RETRY 거절, C 판정 PASS |
 | C19~C20 | PostgreSQL seq/retired boot/epoch 복구와 정책45초 경계, 실제 서버 재시작 PASS |
-| C21~C23 | release-loss의 DB/해제 축 분리·lastRelease 복구, DB 대조 순서 테스트 PASS. 기존 확인 유실 회귀는 남음 |
+| C21~C23 | release-loss의 DB/해제 축 분리·lastRelease 복구, DB 대조 순서·proxy-puback/negative 확인 유실 회귀 PASS |
 | C24 | 실제 EN/INTERRUPTED_REBOOT/UNKNOWN_AFTER_REBOOT·옛 boot 거절 PASS |
 | C25 | 실제 NORMAL60개·서버 INCOMPLETE 전체 회귀·최신 UART0/1/59개 PASS |
-| C26 | 제어 계약100/기존108·엄격 codec/C·실제 guards·확장 ACL PASS. 기존16KiB/부정 확인 회귀는 남음 |
-| C27 | 실제 PG 제어 행 잠금 중 기존 결과 커밋/확인, 실행기/큐 한도, 실제 상태 보고 유실 PASS. 장치 송신 압력 회귀는 남음 |
+| C26 | 제어 계약100/기존108·엄격 codec/C·실제 guards·확장 ACL·기존16KiB/부정13종 확인 회귀 PASS |
+| C27 | 실제 PG 제어 행 잠금 중 기존 결과 커밋/확인, 실행기/큐 한도, 실제 상태 보고 유실·상태PUBACK6개 차단/RX7연결 중 결과 보존·해제 PASS |
 | C28 | 실제 MQTT모드 USB START/RETRY 거절과 UART모드 MQTT START/허가 거절 PASS |
-| C29 | 기존 C31 포함 총45·Host21·backend181 PASS. 기존 장비13종 중 normal0/1/59/60+retry/exhaust/db-outage/broker-restart/reboot/proxy-early 신규 PASS. Wi-Fi 단절은 환경 제약 NOT VERIFIED, 프록시2종 미실행 |
+| C29 | 기존 C31 포함 총45·Host21·backend181 PASS. 기존 장비13종 중12종·신규C27·일반MQTT 복원/normal PASS. 물리 Wi-Fi 단절은 NOT VERIFIED/2026-10-23 사용자 승인 제외 |
 
-각 행의 미검증 부분까지 끝나기 전 전체 VERIFIED로 표시하지 않는다. 로컬 증거는 .tools/device-test/control-*.json에 보관한다.
+물리 Wi-Fi 단절은 사용자 승인으로 현재 인수 범위에서 제외했으며 NOT VERIFIED를 유지한다.
+나머지 인수 조건은 검증을 마쳤다. 로컬 증거는 .tools/device-test/control-*.json과 accept-*.json에 보관한다.
