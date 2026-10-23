@@ -4,6 +4,9 @@
 #include "control.h"
 #include "command_control.h"
 #include "transport.h"
+#include "ads1115.h"
+#include "tds_sensor.h"
+#include "worker.h"
 #if !defined(HWM_CREDENTIAL_FREE) && __has_include("local_config.h")
 #include "local_config.h"
 #else
@@ -22,6 +25,12 @@ static bool fatal;
 static hwm_command_control control;
 static char status_payload[HWM_CONTROL_MAX + 1];
 static bool reported;
+static bool sensor_failed;
+static hwm_sensor_worker sensor_worker;
+static uint32_t sensor_generation;
+#ifndef HWM_REAL_SENSOR
+#define HWM_REAL_SENSOR 0
+#endif
 #ifndef HWM_CONTROL_MQTT
 #define HWM_CONTROL_MQTT 1
 #endif
@@ -39,10 +48,60 @@ static void uuid(char out[37])
 static void report(const char *probe)
 {
     control.ready = hwm_transport_rx_ready();
-    control.fault = control.fault || fatal;
+    /* A sensor fault must not disable RETRY of an already frozen result. */
+    control.fault = control.fault || fatal || (sensor_failed && session.state == HWM_IDLE);
     size_t length = hwm_status_json(&control, &session, now_ms(), probe, status_payload, sizeof(status_payload));
     if (length) hwm_transport_status(status_payload, length);
     reported = true;
+}
+static void sensor_failure(const char *reason, uint64_t measured, unsigned window_count)
+{
+    sensor_failed = true;
+    hwm_worker_cancel(&sensor_worker, sensor_generation);
+    printf("HWM_SENSOR_FAULT category=acquisition valid_samples=%u buffer_retained=1 reason=%s elapsed_ms=%llu due_ms=%llu window_count=%u\n",
+        session.count, reason, (unsigned long long)(measured - session.started_ms),
+        (unsigned long long)(session.deadline_ms - session.started_ms), window_count);
+    if (!hwm_finish_incomplete(&session, now_ms())) {
+        fatal = true;
+        printf("HWM_FAULT category=sensor_finalize buffer_retained=1\n");
+    }
+}
+static void start_sensor(void)
+{
+    if (!HWM_REAL_SENSOR || session.state != HWM_MEASURING) return;
+    if (++sensor_generation == 0) sensor_generation = 1;
+    if (!hwm_worker_start(&sensor_worker, sensor_generation, session.target, session.started_ms))
+        sensor_failure("worker_start", now_ms(), 0);
+}
+static void sample(void)
+{
+    if (!HWM_REAL_SENSOR) {
+        if (hwm_sample_simulated(&session, now_ms()) && session.count % 10 == 0)
+            printf("HWM_SAMPLE_COUNT samples=%u\n", session.count);
+        return;
+    }
+    hwm_worker_result result;
+    for (unsigned i = 0; i < HWM_WORKER_CAPACITY && hwm_worker_receive(&sensor_worker, &result); i++) {
+        if (result.generation != sensor_generation) {
+            printf("HWM_SENSOR_DISCARDED reason=generation\n"); continue;
+        }
+        if (session.state != HWM_MEASURING) {
+            /* A consumer fault already froze its valid prefix; queued later readings cannot change it. */
+            printf("HWM_SENSOR_DISCARDED reason=finalized\n"); continue;
+        }
+        if (result.error != HWM_WORKER_OK) {
+            sensor_failure(hwm_worker_error_name(result.error), result.at_ms, result.window_count);
+        } else if (result.seq != session.count + 1 || !hwm_sample_append_observed(&session,
+                       result.at_ms, now_ms(), result.value.tds_hundredths, result.value.voltage_hundredths)) {
+            sensor_failure("session_append", result.at_ms, 0);
+        } else {
+            printf("HWM_SENSOR_SAMPLE seq=%u tds_hundredths=%ld voltage_hundredths=%ld\n",
+                session.count, (long)result.value.tds_hundredths, (long)result.value.voltage_hundredths);
+        }
+    }
+    uint32_t failed_generation = hwm_worker_take_failure(&sensor_worker);
+    if (failed_generation == sensor_generation && failed_generation && session.state == HWM_MEASURING)
+        sensor_failure("queue", now_ms(), 0);
 }
 static void status(void)
 {
@@ -66,6 +125,7 @@ static void command(const char *line)
     if (HWM_CONTROL_MQTT) { printf("HWM_COMMAND_REJECTED reason=control_mode\n"); return; }
     bool accepted = !fatal && !control.fault && (cmd.type == HWM_COMMAND_START
         ? hwm_start(&session, cmd.session_id, HWM_SAMPLE_TARGET, now_ms()) : hwm_retry(&session, cmd.session_id, now_ms()));
+    if (accepted && cmd.type == HWM_COMMAND_START) start_sensor();
     printf("HWM_COMMAND_%s type=%s\n", accepted ? "ACCEPTED" : "REJECTED", cmd.type == HWM_COMMAND_START ? "START" : "RETRY");
     status();
 }
@@ -123,7 +183,9 @@ static void network_event(const hwm_net_event *event)
             hwm_control_probe(&control, &session, window, now);
             report(event->command.probe_id);
         } else {
+            hwm_state before = session.state;
             hwm_control_execute(&control, &session, &event->command, now);
+            if (before == HWM_IDLE && session.state == HWM_MEASURING) start_sensor();
             report(NULL);
         }
     } else if (event->kind == HWM_NET_INVALID_COMMAND) printf("HWM_CONTROL_REJECTED reason=contract\n");
@@ -148,7 +210,14 @@ void app_main(void)
     if (!hwm_control_init(&control, HWM_DEVICE_ID, boot, HWM_CONTROL_MQTT)) {
         printf("HWM_FAULT category=control_initialization\n"); return;
     }
-    printf("HWM_BOOT mqtt=5 simulated=1 target=%d mode=%s\n", HWM_SAMPLE_TARGET, HWM_CONTROL_MQTT ? "MQTT" : "UART");
+    hwm_set_real_sensor(&session, HWM_REAL_SENSOR);
+    if (HWM_REAL_SENSOR) {
+        sensor_failed = !hwm_ads1115_init()
+            || !hwm_worker_init(&sensor_worker, hwm_ads1115_read, NULL, HWM_WORKER_CAPACITY);
+        control.fault = sensor_failed;
+        printf("HWM_SENSOR_INIT ready=%d address=0x48 calibration=%s\n", !sensor_failed, HWM_SENSOR_CALIBRATION);
+    }
+    printf("HWM_BOOT mqtt=5 simulated=%d target=%d mode=%s\n", !HWM_REAL_SENSOR, HWM_SAMPLE_TARGET, HWM_CONTROL_MQTT ? "MQTT" : "UART");
     hwm_state last_state = HWM_IDLE;
     unsigned last_attempt = 0;
     bool last_ready = false;
@@ -161,8 +230,7 @@ void app_main(void)
             /* A finite queue bounds callback pressure; timers still run after at most 24 events. */
             for (unsigned i = 0; i < 24 && hwm_transport_receive(&event, now_ms()); i++) network_event(&event);
             hwm_transport_poll(now_ms());
-            if (session.state == HWM_MEASURING && hwm_sample_simulated(&session, now_ms()) && session.count % 10 == 0)
-                printf("HWM_SAMPLE_COUNT samples=%u\n", session.count);
+            sample();
             hwm_state before = session.state;
             hwm_tick(&session, now_ms(), hwm_random_jitter(hwm_retry_cap_ms(&session)));
             if (before != session.state && (session.state == HWM_BACKOFF || session.state == HWM_MANUAL_WAIT)) stop_tx();

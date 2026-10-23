@@ -1,5 +1,9 @@
 # ESP32 개발·장비 인수 환경
 
+실측 구현 진행 중: [SEN0244·ADS1115 안내](ESP32_SENSOR_SETUP.md).
+일반 Build 기본값은 Source ADS1115다. 이 문서의 기존 가상 MQTT 인수용 Build에는
+`-Source SIMULATED`를 명시한다. 실제 보드/이미지 상태는 HANDOFF를 따른다.
+
 상세 승인 범위: [작업 명세](tasks/ESP32_FIRMWARE_INTEGRATION.md).
 USB 제어: [제어 계약](DEVICE_CONTROL_CONTRACT.md).
 
@@ -44,7 +48,7 @@ sdkconfig·sdkconfig.local·build/는 루트 .gitignore 대상이다.
 # BOOT/EN으로 다운로드 모드 진입 후
 ./scripts/esp32.ps1 -Action Flash -ManualDownload
 # ESP-IDF export를 한 셸의 Python 사용
-python scripts/esp32-control.py watch --seconds 4 --expected-tests 45
+python scripts/esp32-control.py watch --seconds 15 --expected-tests 60
 ```
 
 테스트 이미지는 네트워크/실제 센서를 사용하지 않는다. UART 수집기는 테스트 개수·실패 0·건너뜀 0을

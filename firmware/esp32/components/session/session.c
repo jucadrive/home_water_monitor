@@ -64,16 +64,38 @@ bool hwm_start(hwm_session *s, const char *uuid, unsigned target, uint64_t now)
     return target != 0 || finalize(s, now);
 }
 
-bool hwm_sample_simulated(hwm_session *s, uint64_t now)
+bool hwm_set_real_sensor(hwm_session *s, bool real)
 {
-    if (!s || s->state != HWM_MEASURING || now < s->deadline_ms || now < s->started_ms
-        || now - s->started_ms > INT32_MAX || s->count >= s->target) return false;
+    if (!s || s->state != HWM_IDLE) return false;
+    s->real_sensor = real;
+    return true;
+}
+bool hwm_sample_append(hwm_session *s, uint64_t now, int32_t tds, int32_t voltage)
+{
+    return hwm_sample_append_observed(s, now, now, tds, voltage);
+}
+bool hwm_sample_append_observed(hwm_session *s, uint64_t now, uint64_t processed, int32_t tds, int32_t voltage)
+{
+    if (!s || processed < now || s->state != HWM_MEASURING || now < s->deadline_ms || now < s->started_ms
+        || now - s->started_ms > INT32_MAX || s->count >= s->target
+        || tds < 0 || tds > 100000 || voltage < 0 || voltage > 230000) return false;
     unsigned i = s->count;
     s->samples[i] = (hwm_sample){ .seq = i + 1, .elapsed_ms = (uint32_t)(now - s->started_ms),
-        .tds_hundredths = 20000 + (int32_t)i, .warmup = i < 10, .voltage_hundredths = 100000 + (int32_t)i };
+        .tds_hundredths = tds, .warmup = i < 10, .voltage_hundredths = voltage };
     s->count++;
     s->deadline_ms = now + 1000;
-    return s->count != s->target || finalize(s, now);
+    return s->count != s->target || finalize(s, processed);
+}
+bool hwm_sample_simulated(hwm_session *s, uint64_t now)
+{
+    if (!s || s->real_sensor) return false;
+    return hwm_sample_append(s, now, 20000 + (int32_t)s->count, 100000 + (int32_t)s->count);
+}
+bool hwm_finish_incomplete(hwm_session *s, uint64_t now)
+{
+    if (!s || s->state != HWM_MEASURING || s->count >= s->target || now < s->started_ms
+        || now - s->started_ms > INT32_MAX) return false;
+    return finalize(s, now);
 }
 
 bool hwm_retry(hwm_session *s, const char *uuid, uint64_t now)
@@ -171,10 +193,11 @@ size_t hwm_serialize(const hwm_session *s, char *out, size_t capacity)
     size_t used = 0;
     if (!append(out, capacity, &used, "{\"schemaVersion\":1,\"eventType\":\"SESSION_RESULT\",\"deviceId\":\"%s\",\"sessionId\":\"%s\","
         "\"startedAt\":null,\"expectedSamples\":60,\"samplingIntervalMs\":1000,\"temperatureAssumedC\":25.00,"
-        "\"calibrationVersion\":\"simulated-v1\",\"measurements\":[", s->device_id, s->session_id)) return 0;
+        "\"calibrationVersion\":\"%s\",\"measurements\":[", s->device_id, s->session_id,
+        s->real_sensor ? "sen0244-uncalibrated-v1" : "simulated-v1")) return 0;
     for (unsigned i = 0; i < s->count; i++) {
         const hwm_sample *m = &s->samples[i];
-        /* Simulated source uses nonnegative integer hundredths; no binary-float conversion. */
+        /* Wire values are frozen nonnegative hundredths; retries never recalculate them. */
         if (m->tds_hundredths < 0 || m->voltage_hundredths < 0) return 0;
         if (!append(out, capacity, &used, "%s{\"seq\":%u,\"elapsedMs\":%lu,\"tdsPpm\":%ld.%02ld,\"isWarmup\":%s,\"rawVoltageMv\":%ld.%02ld}",
             i ? "," : "", m->seq, (unsigned long)m->elapsed_ms, (long)(m->tds_hundredths / 100),
