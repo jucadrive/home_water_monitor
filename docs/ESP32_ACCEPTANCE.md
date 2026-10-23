@@ -1,5 +1,9 @@
 # ESP32 실제 MQTT 인수 재개 절차
 
+이 문서의 기존 가상 인수용 Build에는 `-Source SIMULATED`를 명시한다.
+실측 Source ADS1115/센서 인수는 [실측 안내](ESP32_SENSOR_SETUP.md)를 따른다.
+아래 이전 이미지·검증 이력과 최신 HANDOFF의 실제 상태를 구분한다.
+
 2026-10-22 개방형 Wi-Fi 사용을 이번 가상 데이터 인수에 한정해 추가 승인하고 재개했다.
 로컬 wifi.local.json에 `authMode: "open"`과 빈 password를 명시한다. 생략 시 wpa2로 처리한다.
 개방형 망에서 인증 MQTT TCP는 암호화되지 않는다. 이 예외는 운영/센서 데이터 전송에 확대하지 않는다.

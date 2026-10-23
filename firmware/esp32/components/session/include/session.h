@@ -35,13 +35,20 @@ typedef struct {
     uint32_t generation;
     int msg_id;
     uint64_t started_ms, deadline_ms;
-    bool finalized;
+    bool finalized, real_sensor;
     size_t payload_len;
     char payload[HWM_MAX_PAYLOAD + 1];
 } hwm_session;
 
 bool hwm_init(hwm_session *s, const char *device_id);
 bool hwm_start(hwm_session *s, const char *uuid, unsigned target, uint64_t now);
+/* Source is selected only while idle; frozen metadata follows the retained payload. */
+bool hwm_set_real_sensor(hwm_session *s, bool real);
+bool hwm_sample_append(hwm_session *s, uint64_t now, int32_t tds_hundredths, int32_t voltage_hundredths);
+/* A delayed consumer preserves acquisition time but starts transmission deadlines at processing time. */
+bool hwm_sample_append_observed(hwm_session *s, uint64_t measured_ms, uint64_t processed_ms,
+    int32_t tds_hundredths, int32_t voltage_hundredths);
+bool hwm_finish_incomplete(hwm_session *s, uint64_t now);
 bool hwm_sample_simulated(hwm_session *s, uint64_t now);
 bool hwm_retry(hwm_session *s, const char *uuid, uint64_t now);
 bool hwm_submitted(hwm_session *s, int msg_id, uint64_t now);

@@ -1,5 +1,98 @@
 # Home Water Monitor 인계 — 2026-10-23
 
+## 최신 체크포인트 — SEN0244 실측 기능 DONE·Git 커밋 승인
+- 상태 DONE(3단계실측기능). 사용자가 현재검증으로사용가능하다고판단되면교정·절대정확도는미검증으로유지하고
+  3단계를마무리해Git반영하도록승인했다. 최종리뷰에서추가수정문제없음을확인하고커밋을진행한다.
+  푸시/PR/병합은GIT_WORKFLOW.md에따라커밋승인에서확장하지않으며별도명시승인대기다.
+  전체5개Phase 및 측정실행격리 추가계획 사용자승인(2026-10-23), 단일에이전트 수행.
+  브랜치codex/tds-sensor-integration/기준main b247145, staged0. 아래진행중/실패/미실행표기는이전이력이다.
+- 현재보드/build 모두ADS1115 일반MQTT60/18883/943600 bytes, Build/flash/hash exit0/PASS.
+  PC192.168.0.38/COM5. 실제SEN0244 +3.3V/-GND/A→ADS1115 A0, VDD3.3V/ADDR GND0x48/SDA21/SCL22.
+  SDA노란선은사용자전원OFF후정상복원완료했다. 재부팅/다운로드모드대기상태가아니다.
+- 구현: 고정IDF I2C/25개전압중앙값/정수유리식환산/미교정메타데이터/실측·가상모드.
+  정적FreeRTOS worker1개(4KiB stack/우선순위6/소유core0), 요청큐1/결과큐최대61,
+  세대·실제완료시각·수치만복사/취소·포화별도원자신호. session·제어·MQTT는main단독소유.
+  START수락후보고전worker시작, 원본은측정시각/전송deadline은처리시각 기준.
+  1000ms간격/100ms지연거절/불변원본/커밋확인후해제/기존공개계약유지. backend/DB수정0.
+- 실제보드60개(기존45+센서11+worker4) 실패0/무시0 exit0/PASS, Test205184 bytes/flash/hash PASS.
+  3.5초소비지연에도실제시각유지/새전송deadline/큐포화/다음세대/취소/읽기지연오류 검증.
+  CredentialFree160656/SIMULATED919856/ADS1115 943600 Build exit0/PASS(실제partition여유10%).
+- Host25개 실패0/오류0/건너뜀0·PC smoke·확장ACL 새실행 exit0/PASS.
+  Python구문/diff PASS, 알려진로컬자격증명문자열25후보파일일치0. 신규Java/Kotlin0개.
+  backend181/계약100·108/기존가상장비종단은성공결과재사용(이번새실행아님). 자동Lint/Arch검사는기존MISSING.
+- worker 정상물측정 두번 exit0/PASS: 각60원본/통계50/UART-MQTT-DB전체필드·독립환산/NORMAL/해제/IDLE0건.
+  세션74e85b96-ff0b-48b4-8ba9-30f444c1c5d8(네통계121.11ppm, 미교정25°C가정),
+  세션6708b71d-f669-456b-9b18-38162d11f7cb. 증거worker-normal-first/second.json.
+- worker 물리SDA오류 exit0/PASS: 세션172fb165-60e0-4663-8c10-53de178829fd,
+  29건INCOMPLETE/통계NULL/원본일치/해제/신규START차단. worker-interrupted.json.
+  SDA분리유지·EN재부팅 init-fault exit0/PASS: 새bootId/START미발행/가짜세션없음.
+- 최종worker strict retry exit0/PASS: 세션08aba623-573b-4f48-8f88-c4341c0ac249,
+  실제60개/자동5회소진/65초추가전송0/보관중START거절/수동RETRY1회/총6회hash1,
+  UART-MQTT-DB/독립환산/NORMAL/RELEASE_CONFIRMED/최종IDLE0건. proxy결과차단5/errors0.
+  증거.tools/device-test/worker-retry.json 및 worker-retry-diagnostic.json. 실패한이전시도를PASS로덮어쓰지않는다.
+- 오류prefix의동일payload RETRY는 C회귀 및 이전실제6건복구검증 재사용.
+  새worker물리오류와정상60건strict RETRY는각각새실행이며, 오류prefix+차단프록시결합시험을추가실행했다고주장하지않는다.
+- 안전종료 PASS: 전용backend/DB/브로커중지,18883/18884규칙False,시험4포트18883/18884/18080/25432 listener0.
+  COM5 IDLE/session none/samples0/tx_active0/wifi_up1/rx_ready0/min_heap93376 bytes.
+  DB볼륨/로컬비밀설정/다른서비스보존. 보관원본을리셋으로버리지않았다.
+- 수정이력3/5: 최초진단1/1ms조기append시각수정1/Unity64비트assertion호환·tearDown정리1.
+  첫Test60 실패4(비교지원2+정리누락연쇄2)였으나보완후60/0/0. 조건삭제·허용치완화없음.
+  worker전late오류를일으킨정확한SDK API구간은미확정. 현재승인된격리구조에서반복실측·오류·strict RETRY를검증했다.
+- 미검증범위: 표준액/TDS미터/멀티미터없음→교정·실수온·독립전압/절대정확도 NOT VERIFIED.
+  초기10개warmup이충분한안정화시간이라는증거없음. 물리Wi-Fi단절은기존사용자승인제외 유지.
+- 다음: 승인된3단계변경커밋→커밋SHA·원격대상을제시하고푸시/PR/병합승인확인.
+  4단계조회·제어화면/결과·추세조회API는TODO. 이번커밋은기능을추가변경하지않아기존검증결과를재사용한다.
+  커밋초안 feat: acquire SEN0244 readings through ADS1115.
+  사진.codex-remote-attachments는커밋제외. 상세명세/결과 tasks/TDS_SENSOR_INTEGRATION.md.
+
+## 현재 진행 — SEN0244·ADS1115 실측 연결
+- 상태 IN_PROGRESS. 사용자 전체5개Phase 승인. 명세: tasks/TDS_SENSOR_INTEGRATION.md,
+  배선/실행: ESP32_SENSOR_SETUP.md. 기준main b247145(PR #10), 시작clean, 브랜치codex/tds-sensor-integration.
+- 부품: SEN0244/ADS1115(VDD,GND,SCL,SDA,ADDR,ALRT,A0~A3)/ESP32/점퍼/830홀 빵판.
+  두보드 헤더 납땜·센서 +/-/A 암커넥터 사용자 확인. ADDR/풀업 미확인, TDS미터/멀티미터 없음.
+  사진 확인 전 배선/ADDR 임의GND연결/전원 인가하지 않는다. 교정 표준액 여부도 미확인.
+- 구현: 신규sensor 컴포넌트(고정IDF I2C/ADS1115/25개전압중앙값/정수유리식TDS),
+  실측샘플 입력·불완전prefix확정·교정메타고정·ADC오류후기존버퍼RETRY/해제뒤신규START차단.
+  Source ADS1115(스크립트 기본)/SIMULATED 명시선택, 실측 인수도구4종과PC검사4개/운영문서 추가.
+- 검증: 실제보드Unity54개(기존45+신규9) 실패0/무시0 exit0/PASS, Test이미지200944 bytes/flash/hash PASS.
+  CredentialFree160656/SIMULATED919840/ADS1115일반942016 bytes Build exit0/PASS, 실측partition여유10%.
+  Host25개 실패0/오류0/건너뜀0, PC smoke·확장ACL exit0/PASS. PS AST/Python구문/diff PASS.
+- 현재 보드=Test54(네트워크/실제측정 없음), 로컬build=ADS1115일반MQTT60/18883/942016 bytes.
+  실측 이미지 flash/ADC응답/배선/물측정·오류/RETRY 종단은 아직 NOT RUN/NOT VERIFIED.
+  표준액·비교미터·멀티미터 없는 교정/독립정확도는 NOT VERIFIED. 실측데이터로 가상값 대체 금지.
+- backend/DB/공개스키마 변경0, 기존backend181개/계약100·108 성공결과 재사용. 신규Java/Kotlin0개.
+  Phase2/3/4 실패기반자동수정0회. 커밋/푸시 없음. 최초전체승인은 유지한다.
+- 다음: 모듈앞뒷면/ESP32핀표기 사진으로ADDR/풀업·핀 확인→전원OFF배선→일반실측flash/종단 인수.
+  이 물리 확인은 BLOCKED이며 소프트웨어 준비 완료를 센서연결 완료로 표시하지 않는다.
+- 후속 사진4개 검토: ESP32오른쪽3V3/GND/D21/D22와ADC HW-198/103저항, 센서케이블 흰3핀↔검정암3구 확인.
+  사진만으로ADDR-GND연속성은 단정하지 않는다. 전원OFF에서ADDR외부GND점퍼/3.3V전원 배선안 안내.
+  센서보드라벨 +/-/A와케이블색 대조·배선전체사진 확인 후 전원인가한다. 현재 배선/실측은 여전히 NOT VERIFIED.
+  사진대기 조건은 해소됐으며 다음은 사용자 전원OFF배선·검토다. 추가 소스 수정/재빌드/장치조작 없음.
+- 사용자 ADC 배선 사진3개 검토: ESP32 D21청록/D22주황, ADC VDD흰색/GND보라/SCL빨강/SDA노랑으로 보인다.
+  ADDR선은ADC쪽 출구가 가려짐(빵판10번파랑으로 보임). 빵판5번검정·흰/10번회색·보라·파랑/
+  15번청록·노랑/20번주황·빨강의 조합은 계획과 일치해 보이나 실제핀삽입구멍은 하우징에 가려 확정불가.
+  사용자 동일숫자행·수핀삽입 확인 전 USB전원대기. 사진을 전기적 연속성/ADC통신 PASS로 처리하지 않는다.
+- 사용자가 안내한9선/빵판5·10·15·20행/ADDR 연결과 정확히 일치한다고 직접 확인했다.
+  ADC만 연결한 채USB전원/다운로드모드 준비를 요청했다. TDS/A0는 미연결 유지.
+  준비된실측이미지942016 bytes/REAL_SENSOR ON/TEST_IMAGE OFF/CONTROL_MQTT ON/CREDENTIAL_FREE OFF 재확인.
+  다음flash 후 ADC0x48 ACK·설정재조회 및IDLE0건을 확인한다. 임의START/물측정은 아직 하지 않는다.
+- 최신 물리 체크포인트: USB/다운로드모드 준비 사용자 확인 후 COM5 실측이미지942016 bytes flash/hash exit0/PASS.
+  부팅UART HWM_SENSOR_INIT ready=1 address=0x48 calibration=sen0244-uncalibrated-v1,
+  HWM_BOOT simulated=0 target60 modeMQTT 확인. ADC ACK/설정쓰기·재조회 성공이다.
+  이후STATUS IDLE/session none/samples0/finalized0/tx_active0/wifi_up1/rx_ready0,
+  min_heap148436 bytes. 브로커/DB/시험방화벽은 종료상태 유지, rx_ready0은 예상이다.
+  현재 보드/build 모두 일반ADS1115 실측이미지다(Test54 이미지가 아님). 측정 START는 보내지 않았다.
+- 다음: IDLE0건 확인됐으므로 사용자 USB분리→SEN0244 흰색3핀 연결/보드 +/-/A와선색사진 확인→
+  검정3구에수-수점퍼를사용해3.3V/GND/A0 연결. 현재TDS/A0 미연결, 아날로그값·물측정은NOT VERIFIED.
+- 센서배선 사진후속: SEN0244 3핀은검정-/빨강+/파랑A를사진으로확인했다.
+  사용자파랑A의연장점퍼는흰색이다. 흰색신호선↔빵판25번↔ADC A0갈색선의조합은사진상일치해보인다.
+  전원은센서빨강→기존3.3V5번줄/검정→GND10번줄로안내했고사진검토했다.
+  센서보드의2핀프로브소켓은사진상비어있다. USB분리상태에서프로브연결확인후전원/실측을진행한다.
+  색상변경자체는문제없으며회로연결대상으로판정한다. 실제전압/물측정은아직NOT VERIFIED.
+- 안전 종료: 전용backend/DB/브로커 중지, 시험4포트 listener0, 두시험방화벽False 확인.
+  변경후보22개 알려진 로컬 비밀값 일치0/공백검사PASS/staged0. 바이너리/로컬설정은Git제외 유지.
+- 커밋 초안: feat: acquire SEN0244 readings through ADS1115
+
 ## 최신 체크포인트 — 사무실 전환 후 잔여 인수·안전 종료
 - 기존 승인 Phase 4/5 중 남았던 proxy-puback/proxy-negative/C27/Host/일반 MQTT 복원·normal을 완료했다.
   2026-10-23 사용자가 물리 Wi-Fi 단절 시험을 생략하고 넘어가도록 명시했다.

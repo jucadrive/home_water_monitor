@@ -16,7 +16,8 @@ static const char *normal = "{\"schemaVersion\":1,\"eventType\":\"SESSION_PRESER
     "\"sessionId\":\"12345678-1234-4234-8234-123456789abc\",\"preservationResult\":\"NORMAL\",\"preservedSampleCount\":60,\"comparison\":null}";
 
 void setUp(void) { TEST_ASSERT_TRUE(hwm_init(&session, "esp32-bench")); memset(&frame, 0, sizeof(frame)); }
-void tearDown(void) {}
+void hwm_sensor_worker_test_cleanup(void);
+void tearDown(void) { hwm_sensor_worker_test_cleanup(); }
 static void filled(unsigned count)
 {
     TEST_ASSERT_TRUE(hwm_start(&session, uuid, count, 0));
@@ -281,6 +282,8 @@ static void frame_rejections(void)
 }
 
 void hwm_run_command_tests(void);
+void hwm_run_sensor_tests(void);
+void hwm_run_sensor_worker_tests(void);
 void app_main(void)
 {
     UNITY_BEGIN();
@@ -295,6 +298,8 @@ void app_main(void)
     RUN_TEST(invalid_json_semantics); RUN_TEST(empty_confirmation); RUN_TEST(payload_byte_boundary);
     RUN_TEST(fragmented_frame); RUN_TEST(frame_rejections);
     hwm_run_command_tests();
+    hwm_run_sensor_tests();
+    hwm_run_sensor_worker_tests();
     int failed = UNITY_END();
     while (1) {
         printf("HWM_TEST_RESULT tests=%u failed=%d ignored=%u\n", Unity.NumberOfTests, failed, Unity.TestIgnores);

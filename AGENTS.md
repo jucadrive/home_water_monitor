@@ -5,7 +5,7 @@
 - Git 루트는 이 폴더, Gradle 루트는 backend/home-water-monitor-backend다.
 - Java 25, Spring Boot 4.1.1, Gradle Wrapper 9.8.1, PostgreSQL 18을 사용한다.
 - Spring Data JPA·Flyway와 MQTT 5.0 수신·커밋 후 보존 확인을 사용한다. 실제 장비 인수 검증은 별도다.
-- ESP32 펌웨어는 firmware/esp32의 ESP-IDF 5.5.5·고정 ESP-MQTT를 사용한다. 현재 소스는 가상 측정이다.
+- ESP32 펌웨어는 firmware/esp32의 ESP-IDF 5.5.5·고정 ESP-MQTT를 사용한다. ADS1115 실측/가상 소스를 선택하며 실측 기능 인수를 통과했다. 교정·독립 정확도는 별도다.
 
 ## 2. 문서와 사실 확인
 - 운영 방식은 docs/Harness.md, 현재 상태는 docs/HANDOFF.md와 실제 소스를 따른다.
