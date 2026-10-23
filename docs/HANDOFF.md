@@ -1,5 +1,15 @@
 # Home Water Monitor 인계 — 2026-10-23
 
+## 최신 Git 체크포인트 — 3단계 DONE·PR #11
+- 사용자 추가 승인(2026-10-23): 푸시 → PR 생성 → CI 확인·최종 리뷰 → main 병합·로컬 동기화까지 진행.
+- 기능 커밋: `9351d2aaf56eb841504cfc3cebb95570e6612de2` (`feat: acquire SEN0244 readings through ADS1115`).
+- 원격 작업 브랜치 `origin/codex/tds-sensor-integration` 반영 확인, PR: https://github.com/jucadrive/home_water_monitor/pull/11.
+- 최종 리뷰: 작업/세션 소유권, 측정 시각 보존, 오류 prefix·불변 재전송, 소스 전환과 인수 도구를 검토했다. 추가 수정 사항 없음.
+- 원격 CI는 backend Full만 실행한다. 펌웨어 실제 보드 60개·Host 25개·실측 인수는 아래 로컬 검증 증거를 따른다.
+  최종 병합 여부·병합 SHA·해당 SHA CI 결과는 위 PR 및 Git/Actions 이력을 기준으로 확인한다.
+- 교정·절대 정확도는 NOT VERIFIED 유지. 다음 기능은 4단계 조회·제어 화면과 결과·추세 조회 API(TODO).
+- 추적 소스 변경은 완료했으며 첨부사진·비밀 설정·빌드 산출물은 커밋 대상이 아니다. 아래 승인 대기 표기는 이전 시점 기록이다.
+
 ## 최신 체크포인트 — SEN0244 실측 기능 DONE·Git 커밋 승인
 - 상태 DONE(3단계실측기능). 사용자가 현재검증으로사용가능하다고판단되면교정·절대정확도는미검증으로유지하고
   3단계를마무리해Git반영하도록승인했다. 최종리뷰에서추가수정문제없음을확인하고커밋을진행한다.
