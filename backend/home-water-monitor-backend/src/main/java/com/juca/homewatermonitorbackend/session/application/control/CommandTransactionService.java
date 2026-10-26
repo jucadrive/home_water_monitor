@@ -12,11 +12,21 @@ import static com.juca.homewatermonitorbackend.session.application.control.Contr
 @Transactional(isolation=Isolation.READ_COMMITTED,timeout=3)
 public class CommandTransactionService {
     private final DeviceControlStore store;
-    public CommandTransactionService(DeviceControlStore store) { this.store=store; }
+    private final com.juca.homewatermonitorbackend.cultivation.application.CultivationService cultivations;
+    public CommandTransactionService(DeviceControlStore store,com.juca.homewatermonitorbackend.cultivation.application.CultivationService cultivations) { this.store=store;this.cultivations=cultivations; }
     public ControlCommand reserve(UUID key,String device,String type,UUID requestedSession) {
+        return reserve(key,device,type,requestedSession,null);
+    }
+    public ControlCommand reserve(UUID key,String device,String type,UUID requestedSession,UUID cultivation) {
+        var previous=store.byKey(key);
+        if(previous!=null)return match(previous,device,type,requestedSession,cultivation);
+        if(cultivation!=null) {
+            if(!"START".equals(type))throw new IllegalArgumentException();
+            cultivations.requireActive(cultivation);
+        }
         var slot=store.lock(device);
         var existing=store.byKey(key);
-        if(existing!=null) return match(existing,device,type,requestedSession);
+        if(existing!=null) return match(existing,device,type,requestedSession,cultivation);
         var active=store.command(slot.active());
         if("START".equals(type)) {
             if(slot.held()!=null || active!=null) throw new ControlException(409,"CONTROL_BUSY");
@@ -24,12 +34,15 @@ public class CommandTransactionService {
                 || active!=null && active.commandState()!=State.ACCEPTED && active.commandState()!=State.REJECTED) {
             throw new ControlException(409,"CONTROL_BUSY");
         }
-        var command=store.create(key,device,type,"START".equals(type)?UUID.randomUUID():requestedSession);
+        var command=store.create(key,device,type,"START".equals(type)?UUID.randomUUID():requestedSession,cultivation);
         store.slot(device,slot.boot(),command.commandId(),command.sessionId());
         return command;
     }
     public static ControlCommand match(ControlCommand c,String device,String type,UUID session) {
-        if(!c.same(device,type,session)) throw new ControlException(409,"IDEMPOTENCY_CONFLICT");
+        return match(c,device,type,session,null);
+    }
+    public static ControlCommand match(ControlCommand c,String device,String type,UUID session,UUID cultivation) {
+        if(!c.same(device,type,session,cultivation)) throw new ControlException(409,"IDEMPOTENCY_CONFLICT");
         return c;
     }
     public ControlCommand probing(UUID id) {

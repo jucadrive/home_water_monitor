@@ -1,3 +1,5 @@
+> 2026-10-26 상태 정리: 실측 기능은 2026-10-23 DONE이며 아래 IN_PROGRESS·54개 표기는 당시 기록이다. 최종 보드60/Host25·실측 인수는 tasks/TDS_SENSOR_INTEGRATION.md 최종 결과를 따른다. 교정·실수온·독립 정확도는 NOT VERIFIED. 영양액은 센서0~1000ppm 범위 적합성을 먼저 확인하며 환산 범위를 임의 확대하지 않는다.
+
 # SEN0244·ADS1115 연결·인수
 
 상태 IN_PROGRESS. [승인 범위/인수 조건](tasks/TDS_SENSOR_INTEGRATION.md), 최신 상태는 [HANDOFF](HANDOFF.md).

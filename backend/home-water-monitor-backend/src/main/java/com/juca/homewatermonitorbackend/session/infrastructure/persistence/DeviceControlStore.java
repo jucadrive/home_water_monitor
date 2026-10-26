@@ -45,17 +45,25 @@ public class DeviceControlStore {
                 r.getObject("window_id",UUID.class),r.getString("dispatch_payload"),r.getTimestamp("requested_at").toInstant(),
                 dispatch == null ? null : dispatch.toInstant(),r.getString("reason"),
                 r.getTimestamp("accepted_at")==null?null:r.getTimestamp("accepted_at").toInstant(),
-                r.getTimestamp("release_confirmed_at")==null?null:r.getTimestamp("release_confirmed_at").toInstant());
+                r.getTimestamp("release_confirmed_at")==null?null:r.getTimestamp("release_confirmed_at").toInstant(),r.getObject("cultivation_id",UUID.class));
     }
     public ControlCommand create(UUID key,String device,String type,UUID session) {
+        return create(key,device,type,session,null);
+    }
+    public ControlCommand create(UUID key,String device,String type,UUID session,UUID cultivation) {
         UUID id=UUID.randomUUID();
         String request = "START".equals(type) ? "{\"type\":\"START\"}"
                 : "{\"type\":\"RETRY\",\"sessionId\":\""+session+"\"}";
+        if(cultivation!=null)request="{\"type\":\"START\",\"cultivationId\":\""+cultivation+"\"}";
         jdbc.update("""
                 insert into tds_device_command(command_id,idempotency_key,device_id,command_type,normalized_request,
-                session_id,command_state,requested_at,updated_at) values (?,?,?,?,cast(? as jsonb),?,'REQUESTED',now(),now())
-                """,id,key,device,type,request,session);
+                session_id,cultivation_id,command_state,requested_at,updated_at) values (?,?,?,?,cast(? as jsonb),?,?,'REQUESTED',now(),now())
+                """,id,key,device,type,request,session,cultivation);
         return command(id);
+    }
+    public boolean matchesSource(UUID session,String device) {
+        var sources=jdbc.queryForList("select device_id from tds_device_command where session_id=? and command_type='START'",String.class,session);
+        return sources.isEmpty() || sources.getFirst().equals(device);
     }
     public void dispatch(UUID id,UUID boot,UUID window,String payload) {
         jdbc.update("""

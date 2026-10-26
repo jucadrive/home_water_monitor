@@ -1,3 +1,5 @@
+> **2026-10-26 역사적 명세:** 기존 목적·의사결정·학습 기록을 보존한다. 현재 목적·모바일 요구사항은 [HYDROPONIC_MVP.md](HYDROPONIC_MVP.md), 실행 승인은 [전환 명세](tasks/HYDROPONIC_MIGRATION.md)를 따른다. 아래 초안·미완료 표기는 현재 구현 상태가 아니다.
+
 # Home Water Monitor — 제품 명세와 설계 이력
 
 > 2026-10-21 운영 전환: [루트 AGENTS.md](../AGENTS.md)와 [Harness.md](Harness.md)를 따른다. 사용자는 목표·주요 설계를 승인하고 AI는 단일 에이전트로 구현·검증한다. 아래 설계·참고 예시·과거 합의는 구현 완료의 증거가 아니다. 최신 상태는 [HANDOFF.md](HANDOFF.md)다.
