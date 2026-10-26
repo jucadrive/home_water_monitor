@@ -47,34 +47,38 @@ public class ControlRuntime implements SmartLifecycle {
     public void requireDevice(String device) { if(!allowed.contains(device))throw new ControlException(404,"DEVICE_NOT_FOUND"); }
     public record Submission(ControlCommand command,boolean created) { }
     public Submission submit(UUID key,String device,String type,UUID session) {
+        return submit(key,device,type,session,null);
+    }
+    public Submission submit(UUID key,String device,String type,UUID session,UUID cultivation) {
         ControlPolicy.uuid(key);
+        if(cultivation!=null && !"START".equals(type))throw new IllegalArgumentException();
         var promise=new CompletableFuture<ControlCommand>();var previous=accepting.putIfAbsent(key,promise);
         if(previous!=null) {
-            try{return new Submission(CommandTransactionService.match(previous.get(4,TimeUnit.SECONDS),device,type,session),false);}
+            try{return new Submission(CommandTransactionService.match(previous.get(4,TimeUnit.SECONDS),device,type,session,cultivation),false);}
             catch(ControlException e){throw e;}
             catch(Exception e){throw new ControlException(503,"CONTROL_ACCEPTANCE_PENDING");}
         }
-        try{var result=doSubmit(key,device,type,session);promise.complete(result.command());return result;}
+        try{var result=doSubmit(key,device,type,session,cultivation);promise.complete(result.command());return result;}
         catch(RuntimeException e){promise.completeExceptionally(e);throw e;}
         finally{accepting.remove(key,promise);}
     }
-    private Submission doSubmit(UUID key,String device,String type,UUID session) {
+    private Submission doSubmit(UUID key,String device,String type,UUID session,UUID cultivation) {
         requireDevice(device);ControlPolicy.uuid(key);ControlPolicy.type(type);
         if("RETRY".equals(type))ControlPolicy.uuid(session);
         var previous=store.byKey(key);
-        if(previous!=null)return new Submission(CommandTransactionService.match(previous,device,type,session),false);
+        if(previous!=null)return new Submission(CommandTransactionService.match(previous,device,type,session,cultivation),false);
         if(!running || !admission.tryAcquire())throw new ControlException(503,"CONTROL_CAPACITY");
         boolean owned=false,transferred=false;
         try {
             if(!commanding.add(device))throw new ControlException(409,"CONTROL_BUSY");
             owned=true;exchange.cancel(device);
             ControlCommand c;
-            try { c=transactions.reserve(key,device,type,session); }
+            try { c=cultivation==null ? transactions.reserve(key,device,type,session) : transactions.reserve(key,device,type,session,cultivation); }
             catch(RuntimeException error) {
                 if(!store.keyConflict(error))throw error;
                 var winner=store.byKey(key);
                 if(winner==null)throw error;
-                return new Submission(CommandTransactionService.match(winner,device,type,session),false);
+                return new Submission(CommandTransactionService.match(winner,device,type,session,cultivation),false);
             }
             if(c.commandState()!=State.REQUESTED)return new Submission(c,false);
             UUID id=c.commandId();

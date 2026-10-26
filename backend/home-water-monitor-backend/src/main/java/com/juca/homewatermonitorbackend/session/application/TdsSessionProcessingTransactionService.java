@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class TdsSessionProcessingTransactionService {
     private final TdsSessionLockAdapter locks;
+    private final com.juca.homewatermonitorbackend.session.infrastructure.persistence.DeviceControlStore control;
     private final SaveNormalTdsSessionService normalSave;
     private final SaveIncompleteTdsSessionService incompleteSave;
     private final ProcessNormalTdsSessionRedeliveryService normalRedelivery;
@@ -16,7 +17,9 @@ public class TdsSessionProcessingTransactionService {
 
     public TdsSessionProcessingTransactionService(TdsSessionLockAdapter locks, SaveNormalTdsSessionService normalSave,
             SaveIncompleteTdsSessionService incompleteSave, ProcessNormalTdsSessionRedeliveryService normalRedelivery,
-            ProcessIncompleteTdsSessionRedeliveryService incompleteRedelivery) {
+            ProcessIncompleteTdsSessionRedeliveryService incompleteRedelivery,
+            com.juca.homewatermonitorbackend.session.infrastructure.persistence.DeviceControlStore control) {
+        this.control=control;
         this.locks = locks;
         this.normalSave = normalSave;
         this.incompleteSave = incompleteSave;
@@ -26,6 +29,7 @@ public class TdsSessionProcessingTransactionService {
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public TdsSessionProcessingResult process(SaveNormalTdsSessionCommand command) {
+        if(!control.matchesSource(command.sessionId(),command.deviceId()))throw new IllegalArgumentException("SESSION_DEVICE_MISMATCH");
         var existing = locks.lock(command.sessionId());
         if (existing.isPresent()) return redeliver(existing.get(), command);
         int count = command.measurements().size();
@@ -35,6 +39,7 @@ public class TdsSessionProcessingTransactionService {
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public TdsSessionProcessingResult processExisting(SaveNormalTdsSessionCommand command) {
+        if(!control.matchesSource(command.sessionId(),command.deviceId()))throw new IllegalArgumentException("SESSION_DEVICE_MISMATCH");
         var session = locks.lock(command.sessionId())
                 .orElseThrow(() -> new IllegalArgumentException("기존 세션이 없습니다."));
         return redeliver(session, command);

@@ -61,6 +61,39 @@ class ControlMqttIntegrationTest {
         while(System.nanoTime()<end){if(state.equals(command(id).body().get("commandState").asString()))return;Thread.sleep(50);}
         assertEquals(state,command(id).body().get("commandState").asString());
     }
+    @Test void cultivationRestStartMqttResultAndQueriesKeepReservedTargetAfterClosure() throws Exception {
+        UUID cultivation=UUID.randomUUID(),key=UUID.randomUUID();
+        var created=request("/api/cultivations","{\"plantName\":\"basil\",\"name\":\"tank\",\"startedAt\":\"2026-10-01T00:00:00Z\"}",cultivation);
+        assertEquals(201,created.status());String path="/api/cultivations/"+cultivation;
+        try(var device=new ControlFakeDevice(uri())) {
+            var first=request(path+"/measurement-commands","{\"deviceId\":\"esp32-bench\"}",key);assertEquals(202,first.status());
+            String id=first.body().get("commandId").asString(),session=first.body().get("sessionId").asString();
+            awaitState(id,"ACCEPTED",10);assertEquals(409,start(key).status());
+            assertEquals(200,request(path+"/measurement-commands","{\"deviceId\":\"esp32-bench\"}",key).status());
+            assertEquals(200,request(path+"/end","{}",UUID.randomUUID()).status());
+            var result=(tools.jackson.databind.node.ObjectNode)tools.jackson.databind.json.JsonMapper.builder().build().readTree(java.nio.file.Files.readAllBytes(
+                    java.nio.file.Path.of("../../docs/mqtt/v1/examples/session-result-normal.json")));
+            result.put("sessionId",session).put("deviceId","esp32-bench").putNull("startedAt").put("calibrationVersion","sen0244-uncalibrated-v1");
+            var m=new org.eclipse.paho.mqttv5.common.MqttMessage(codec.encode(result));m.setQos(1);
+            var p=new org.eclipse.paho.mqttv5.common.packet.MqttProperties();p.setPayloadFormat(true);p.setContentType("application/json");m.setProperties(p);
+            device.client.publish("home/water/v1/esp32-bench/events",m).waitForCompletion(5000);
+            long deadline=System.nanoTime()+java.util.concurrent.TimeUnit.SECONDS.toNanos(6);
+            while(request(path+"/measurement-sessions",null,null).body().isEmpty() && System.nanoTime()<deadline)Thread.sleep(25);
+            var history=request(path+"/measurement-sessions",null,null);assertEquals(1,history.body().size());
+            assertEquals(session,history.body().get(0).get("sessionId").asString());assertEquals("REQUESTED",history.body().get(0).get("timeBasis").asString());
+            assertEquals(1,request(path+"/tds-trend",null,null).body().size());
+            assertEquals(60,request("/api/measurement-sessions/"+session,null,null).body().get("measurements").size());
+            synchronized(device) {
+                device.status.put("state","IDLE").putNull("sessionId").put("sampleCount",0).put("finalized",false).put("round",0).put("attempt",0);
+                device.status.putObject("lastRelease").put("sessionId",session).put("preservationResult","NORMAL").put("preservedSampleCount",60).put("reason","PRESERVATION_CONFIRMED");device.emit();
+            }
+            while(!"RELEASE_CONFIRMED".equals(command(id).body().get("deviceBuffer").asString()) && System.nanoTime()<deadline)Thread.sleep(25);
+            assertEquals("RELEASE_CONFIRMED",command(id).body().get("deviceBuffer").asString());
+        } finally {
+            // Isolate a failed simulation from the other scenarios in this shared test database.
+            jdbc.update("update tds_device_control set active_command_id=null,held_session_id=null where held_session_id in (select session_id from tds_device_command where cultivation_id=?)",cultivation);
+        }
+    }
     @Test void blockedControlStatusTransactionDoesNotBlockResultCommitAndPreservationConfirmation()throws Exception {
         var reserved=control.reserve(UUID.randomUUID(),"esp32-bench","START",null);
         var confirmation=new java.util.concurrent.CompletableFuture<JsonNode>();

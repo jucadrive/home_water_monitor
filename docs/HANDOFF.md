@@ -1,3 +1,52 @@
+# 수경재배 전환 Git 통합 — 2026-10-26
+
+- 사용자 명시 지시: 에이전트/하네스 규칙에 따라 현재 수경재배 전환 변경을 커밋하고 PR 생성, CI 확인, main 병합까지 진행한다. 이 지시는 앞선 UI 디자인 리뷰 후 Git 처리 지시를 갱신한다.
+- 작업 브랜치 codex/hydroponic-migration. 커밋·푸시·PR·병합은 이번 요청으로 승인됐다. 운영 배포·운영 DB 반영은 승인 범위에 없다.
+- UI 및 전환 결과는 아래 내용을 포함해 변경 파일을 먼저 검토하고, 연결된 GitHub 권한·필수 검사를 확인한다.
+- 상태 VERIFIED(디자인 최종 리뷰 전, DONE 아님). 크림/연두/초록 테마·둥근 카드/입력·새싹 화분 Canvas·감자꽃 제목/고운돋움 본문·SansSerif 측정값을 전 화면에 적용했다. 폰트는 원본/OFL1.1을 APK에 포함하고 설정에서 라이선스 전문을 열람할 수 있다.
+- 실제 연결된 emulator-5554(API37)에서 최종7개 새 실행 PASS, 실패0/오류0/건너뜀0. 좁은320dp/1.6배 글꼴 입력·등록, 폰트 라이선스, 오류 안내·정상 연결·전체 재배/측정 흐름 포함. 실제 폰은 조작하지 않았다.
+- Android Full PASS: JVM9개 새 실행, Lint0오류/11경고, debug/미서명 release APK 성공. 첫105작업 중48실행/57재사용. 테스트 코드 보강 후 Full은4실행/101재사용이며 JVM/APK 성공 결과 재사용. 최종 Connected는 새 실행(5실행/66재사용).
+- 화면10장 검수 및 XML 보존: .tools/android-acceptance/garden-ui-1/screens, results. 홈·설정·빈 상태·상세·등록·관리·오류·정상/불완전 결과. 전체 기기·글꼴·접근성 검증 완료를 의미하지 않는다.
+- 시험용 서버/전용 컨테이너 종료, 생성한 에뮬레이터 포트 연결 정리. 새 APK를 에뮬레이터에 재설치·실행했다. 서버는 종료 상태라 다시 사용하려면 서버 연결이 필요하다. 에뮬레이터·ADB·Docker 엔진은 유지.
+- Backend/API/DB/MQTT/보안 정책 이번 변경0, 기존 backend204개 검증 유지(이번 UI 작업 재실행 NOT RUN). 실물 센서/교정/독립 정확도 NOT VERIFIED 유지.
+- 자동수정0/5. Git 기존 index와 MIGRATION.md AM 보존. 신규 Kotlin200줄 초과0. 상세 인수/폰트 출처는 tasks/ANDROID_GARDEN_UI.md 및 mobile/android/FONT_NOTICES.md.
+- 다음: 사용자가 캡처/에뮬레이터에서 디자인 리뷰. 승인받기 전 커밋하지 않는다. UI 커밋 초안: feat(android): add a cozy green garden theme.
+
+---
+
+# 수경재배 전환 최종 소프트웨어 인수 — 2026-10-26
+
+- 승인 범위: Kotlin·Jetpack Compose Android 앱과 기존 백엔드 확장, 웹사이트 제외. 디버그 루프백 HTTP3호스트 예외는 사용자 별도 승인 유지, 릴리즈 HTTPS 유지.
+- 단계1~6 소프트웨어 범위 VERIFIED. 실기기 종단5개·화면 검수·최종 backend Full 회귀 완료. 전체 DONE은 사용자 최종 리뷰·승인 후다. 아래의 과거 BLOCKED/TODO는 당시 이력이다.
+- 실제 SM-S947N(Android17/API37)에서 Forms4개+AppFlow1개 새 실행, 실패0/오류0/건너뜀0, exit0. 실제 앱→HTTP→전용 Spring/PostgreSQL/MQTT→모의 장치→보존 확인/버퍼 해제→앱 조회·재배 종료·미연결 과거 기록을 검증했다. SIMULATED는 실측 추세에서 제외된다.
+- Backend 최종 JDK25 build --no-daemon --console=plain exit0/PASS: 204개 새 실행, 실패0/오류0/건너뜀0. 3분43초, test 작업1개 실행/컴파일·패키징6개 UP-TO-DATE 재사용.
+- Android Full exit0: JVM9개 새 실행 실패0/오류0/건너뜀0, Lint0오류/11경고, debug·미서명 release APK PASS(105작업 중19실행/86재사용). 실기기 최종 Connected 작업은 새 실행, 컴파일 등70작업은 UP-TO-DATE였다.
+- 캡처3장 육안 검수 PASS. .tools/android-acceptance/phone-2/screens 및 results에 PNG/XML 보존(Git 제외). 전체 기기·글꼴·접근성 검증 완료를 의미하지 않는다.
+- 임시 인수 서버·전용 컨테이너 정상 종료(stopped·종료 로그 확인), 시험용 adb reverse 제거. 폰에 디버그 APK 재설치·실행 완료. 다른 ADB/에뮬레이터/Docker 엔진 유지. 서버는 종료했으므로 앱 사용 시 별도 서버 연결이 필요하다.
+- 사용자 지시로 실제 ESP32·ADS1115·SEN0244는 나중에 검증한다. 실물 통합·교정·독립 정확도 NOT VERIFIED. 가상 시험 통과를 실물 인수로 간주하지 않는다.
+- 자동수정: 단계5 3/5(Android17 Espresso 호환 포함), 단계6 3/5(스크롤·캡처 내보내기·파일 충돌). USB 단절/승인·서버 수명 만료 등 환경 실패와 과거 실패 이력은 tasks/HYDROPONIC_MIGRATION.md에 보존했다.
+- Git: codex/hydroponic-migration, 기존 사용자 MIGRATION.md AM 및 staged/unstaged 구분 보존. 커밋·푸시·배포·운영 DB·실제 보드 변경 없음. 기존 V1~V5·펌웨어·MQTT 공개 계약 보존.
+- 리뷰 검사: git diff --check·신규 파일 공백·문서 링크 PASS, AGENTS112줄, 신규 Java/Kotlin200줄 초과0. backend Lint/아키텍처 자동 검사는 MISSING 유지.
+- 다음: 사용자 최종 리뷰, 별도 실물 인수 시 ESP32/ADS1115/SEN0244 연결·물 준비 후 기존 장비 절차 적용. 커밋 초안: feat: extend monitoring to hydroponic cultivation with Android client (실행 미승인).
+
+---
+
+# 수경재배 전환 체크포인트 — 2026-10-26
+
+- 사용자 전체 계획 승인: 단계1 문서→2 재배→3 관리→4 측정 연동/조회→5 Kotlin·Jetpack Compose 안드로이드 앱→6 통합. 웹사이트 제외.
+- 기준 main 2d81431, 작업 브랜치 codex/hydroponic-migration. 사용자 MIGRATION.md의 AM 상태 보존. 커밋/푸시/운영 배포/운영 DB 적용 미승인.
+- 명세: HYDROPONIC_MVP.md, 실행·인수·검증: tasks/HYDROPONIC_MIGRATION.md. 기존 하네스·단일 에이전트·수정 한도 유지.
+- 단계1 VERIFIED, 단계2 VERIFIED(새7개+기존정상저장3개 PASS), 단계3 VERIFIED(cultivation 전체14개 PASS), 단계4 VERIFIED(Full204/실패0/오류0/건너뜀0), 단계5 BLOCKED(Android UI 실행 환경), 단계6 TODO. 과거 인수는 아래 이력이며 새 전환 검증이 아니다.
+- 기본 java21, JDK25 별도 설치 확인. Docker Desktop 기동 승인·Testcontainers 검증 완료. Android SDK/adb·에뮬레이터를 명령 승인으로 .tools에 설치했다.
+- Android JVM9개(실패0/오류0/건너뜀0), Lint0오류/12경고, debug/release(미서명) APK·화면 테스트 APK 빌드 PASS. 마지막 Full 진입점은 성공 결과 UP-TO-DATE 재사용(103/105). 상세·실패이력은 작업 명세.
+- 디버그 루프백3호스트 HTTP 예외 별도 사용자 승인 반영. 릴리즈 HTTPS 유지, SDK/서명키/개인설정/산출물 Git 제외.
+- BLOCKED: 에뮬레이터 부팅 전 종료(exit1), ADB 기기 없음. WHPX 진단코드6, 소프트웨어 모드도 실패. 정확한 종료 원인은 미확정. Compose4개 실행·앱 종단·실물 NOT RUN/NOT VERIFIED.
+- 다음: Android 실기기 또는 부팅 가능한 에뮬레이터 준비→verify-android.ps1 Connected→화면 검수/앱 실제 연동→단계6 최종 통합. Windows 기능/드라이버/재부팅은 추가 승인 없이 변경하지 않는다.
+- APK: mobile/android/app/build/outputs/apk/debug/app-debug.apk. 설치·화면 사용성 검증은 아직 하지 못했다. 실행 안내 docs/ANDROID_SETUP.md, 승인 정책 docs/ANDROID_CONNECTIVITY.md.
+
+
+---
+
 # Home Water Monitor 인계 — 2026-10-23
 
 ## 최신 Git 체크포인트 — 3단계 DONE·PR #11

@@ -1,3 +1,5 @@
+> **2026-10-26 전환 합의:** [HYDROPONIC_MVP.md](HYDROPONIC_MVP.md)의 재배·관리·START 연결과 Kotlin/Compose 안드로이드 앱을 승인했다. 신규 업무는 cultivation 계층을 추가하고 기존 measurement domain·원본·통계·MQTT 계약을 보존한다. START 예약에 재배 FK를 고정하고 실제 결과는 sessionId/deviceId로 연결한다. 아래 순차 설계 기록은 당시 상태이며 현재 상태는 HANDOFF.md를 따른다.
+
 > **운영 전환(2026-10-21):** [루트 AGENTS.md](../AGENTS.md)·[Harness.md](Harness.md)를 따른다. 과거 학습·직접 작성 문구는 이력이며 현재 실행 지시가 아니다. 업무 정책과 미정 계약은 유지한다.
 
 # Home Water Monitor — 백엔드 설계 요약

@@ -44,3 +44,13 @@ dependencies {
 tasks.named('test') {
     useJUnitPlatform()
 }
+
+// Explicit, isolated phone acceptance environment; not started by build/test or production startup.
+tasks.register('androidAcceptanceServer', JavaExec) {
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.juca.homewatermonitorbackend.session.infrastructure.mqtt.AndroidAcceptanceServer'
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(25) }
+    args file('../../docs/mqtt/v1/examples').absolutePath,
+            file(providers.gradleProperty('acceptanceDirectory').getOrElse('../../.tools/android-acceptance')).absolutePath
+}

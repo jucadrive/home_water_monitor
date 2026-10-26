@@ -1,7 +1,9 @@
-# Home Water Monitor 작업 규칙
+# Hydroponic Nutrient Monitor 작업 규칙
 
 ## 1. Project Overview
-- 집에서 채수한 물의 TDS 장기 추세를 관측한다. TDS로 수질 안전성·변색 원인을 판정하지 않는다.
+- 수경재배 영양액의 TDS 추세와 재배·물 관리 이력을 관측한다. TDS로 안전성·식물 건강·영양소 상태·교체 시점을 확정하지 않는다.
+- 클라이언트는 Kotlin·Jetpack Compose 안드로이드 앱이다. 웹사이트는 구현 범위 밖이다.
+- Android Gradle 루트는 mobile/android다. AGP8.13.2·Gradle8.13·Kotlin2.2.21·Compose BOM2025.12.01·SDK36을 사용하며 실행 JDK21을 권장한다(backend JDK25와 구분).
 - Git 루트는 이 폴더, Gradle 루트는 backend/home-water-monitor-backend다.
 - Java 25, Spring Boot 4.1.1, Gradle Wrapper 9.8.1, PostgreSQL 18을 사용한다.
 - Spring Data JPA·Flyway와 MQTT 5.0 수신·커밋 후 보존 확인을 사용한다. 실제 장비 인수 검증은 별도다.
@@ -10,8 +12,9 @@
 ## 2. 문서와 사실 확인
 - 운영 방식은 docs/Harness.md, 현재 상태는 docs/HANDOFF.md와 실제 소스를 따른다.
 - 설계 합의: docs/BACKEND_DESIGN_SUMMARY.md.
-- 상세 명세: docs/HOME_WATER_MONITOR_CODEX_SPEC_PAIR_PROGRAMMING.md.
-- 다음 기능 후보: docs/NEXT_MEASUREMENT_COMPARISON.md. 예시를 구현 완료로 간주하지 않는다.
+- 전환 배경: MIGRATION.md. 현재 승인 범위·모바일 변경은 docs/tasks/HYDROPONIC_MIGRATION.md를 따른다.
+- 현재 제품 명세: docs/HYDROPONIC_MVP.md. 기존 제품 명세는 docs/HOME_WATER_MONITOR_CODEX_SPEC_PAIR_PROGRAMMING.md에 이력으로 보존한다.
+- 원본 비교 정책: docs/NEXT_MEASUREMENT_COMPARISON.md. 구현·검증 상태는 실제 소스와 HANDOFF를 확인한다.
 - 구축·기능별 인수 조건과 승인 범위는 docs/tasks/에 기록한다.
 - 과거 페어 프로그래밍·사용자 직접 작성 지침은 현재 운영 규칙이 아니다.
 
@@ -19,6 +22,7 @@
 - measurement.domain: 외부 자원에 의존하지 않는 업무 계산·판단.
 - session.application: 검증, 도메인 호출, 저장·트랜잭션 조율.
 - measurement/session.infrastructure.persistence: JPA 매핑·DB 접근.
+- cultivation은 재배 생명주기·관리 이력을 담당한다. domain은 순수 업무 규칙, application은 트랜잭션 조율, infrastructure는 HTTP·영속성이다.
 - 현재 application은 영속성 구현을 직접 사용한다. 포트 기반 구조로 임의 전환하지 않는다.
 - 기존 패턴을 유지하여 승인한 기능과 무관한 구조 변경을 줄인다.
 - 계층·모듈 경계 변경 및 새로운 기술 도입은 사전 승인 대상이다.
@@ -34,7 +38,9 @@
 - 재수신 비교는 합의된 네 필드와 BigDecimal.compareTo를 따른다.
 - 저장 호출 반환만으로 커밋 완료를 단정하지 않는다. MQTT 보존 확인은 실제 커밋 이후다.
 - 외부 호출의 실패·타임아웃·재시도는 승인된 계약과 테스트로 확인한다.
-- 적용된 V1/V2 마이그레이션은 편집·포맷하지 않는다. 승인 후 새 마이그레이션을 추가한다.
+- 적용된 모든 마이그레이션은 편집·포맷하지 않는다. 승인 후 새 마이그레이션을 추가한다.
+- 재배 연결 전 과거 세션과 원본·통계를 보존한다. START 예약 시 재배 대상을 고정하며 MQTT에 식물 정책을 추가하지 않는다.
+- 미교정·가정 수온·가상 측정과 시각의 근거를 조회·앱에서 구분한다.
 - 동작 변경에는 인수 조건을 검증하는 관련 테스트를 추가·수정한다.
 - 실패를 숨기기 위한 테스트 삭제·약화·검사 비활성화를 하지 않는다.
 - 비밀번호·토큰·실제 환경변수 값은 출력·기록·커밋하지 않는다.
@@ -43,6 +49,7 @@
 - 자동 검사가 없는 규칙은 리뷰 규칙이며 기술적으로 강제된다고 주장하지 않는다.
 
 ## 5. File & Complexity Rules
+- AGENTS.md는 250줄 이하를 유지한다. 상세 도메인·인수 조건은 별도 명세로 안내한다.
 - 신규 Java/Kotlin 파일 200줄 초과는 보고서에 리뷰 대상으로 표시한다.
 - 줄 수만 맞추기 위해 응집된 코드를 임의 분할하지 않는다.
 - 코드 주석은 목적과 중요한 동작·제약을 설명한다.
@@ -67,6 +74,8 @@
 - 펌웨어 Host는 전용 인수 DB/브로커와 JDK 25가 필요하다. UART는 실제 COM3/IDLE 보드가 필요하다.
 - ./scripts/esp32.ps1 -Action Test는 테스트 이미지 빌드만 수행한다. 실제 실행·UART 결과까지 확인한다.
 - 장비 인수·설치/검증 명령은 docs/ESP32_SETUP.md 및 docs/ESP32_ACCEPTANCE.md를 따른다.
+- Android: ./scripts/verify-android.ps1 -Mode Full -JavaHome <JDK21경로>. Connected 모드는 명시적 -DeviceSerial과 부팅된 테스트 기기가 필요하다. docs/ANDROID_SETUP.md를 따른다.
+- Android Lint와 backend 정적 검사 상태를 구분한다. 앱의 디버그 루프백 HTTP만 별도 사용자 승인됐으며 릴리즈 HTTPS·인증서 검증을 유지한다.
 
 ## 7. Autonomous Workflow
 - 단일 에이전트로 수행하며 하위 에이전트 생성·작업 위임을 하지 않는다.

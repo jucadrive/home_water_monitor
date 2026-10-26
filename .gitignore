@@ -58,3 +58,9 @@ __pycache__/
 /firmware/esp32/main/local_config.h
 /infra/device-test/secrets.local.json
 /infra/device-test/private/
+
+# Android SDK locations and signing material
+local.properties
+*.jks
+*.keystore
+captures/
