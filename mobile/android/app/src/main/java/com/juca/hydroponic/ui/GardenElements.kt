@@ -57,7 +57,7 @@ import androidx.compose.ui.unit.dp
     }
 }
 
-@Composable fun GardenIntro(title: String, subtitle: String, eyebrow: String = "작은 정원 · 영양액 일지") {
+@Composable fun GardenIntro(title: String, subtitle: String, eyebrow: String = "뽀싹 · 영양액 일지") {
     Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {

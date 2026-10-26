@@ -1,3 +1,37 @@
+# 뽀싹 Git 통합 승인 — 2026-10-26
+
+- 사용자가 UI 결과를 승인하고 스테이징·커밋·푸시·PR 생성·main 병합까지 명시 지시했다. 뽀싹 이름·아이콘·설치 통합은 DONE, Git 통합은 이 승인에 따라 진행한다. 아래 커밋·푸시 미실행 문구는 당시 이력이다.
+- 기준 main b0a2d82, 작업 브랜치 codex/ppossak-branding. 커밋 메시지: feat(android): brand app as ppossak with supplied launcher icon.
+- 이번 범위는 Android 브랜드 리소스·문구와 관련 작업/인계 기록이다. APK·로컬 설정·개인 첨부는 제외하고 .codex-remote-attachments/를 보존한다.
+- 직전 검증 이후 앱 소스 변경 없음: JVM9개·Lint0오류/9경고·debug APK·실제 폰 설치/단일 패키지/아이콘·뽀싹 표시 성공 결과를 재사용한다. 원격 CI는 backend Full이며 커밋 SHA별 성공을 확인한 뒤 병합한다.
+- 최종 PR·병합 SHA·main CI 결과는 Git 및 PR/Actions 이력을 따른다. 운영 배포·운영 DB 변경은 수행하지 않는다.
+
+---
+
+# 뽀싹 이름·아이콘·앱 통합 — 2026-10-26
+
+- 사용자 승인: 첨부 아이콘·뽀싹 이름 적용 계획 및 기존/preview 앱을 하나로 통일. 상태 VERIFIED(사용자 최종 시각 리뷰 전).
+- 정식 com.juca.hydroponic에 뽀싹 표시 이름·상단 제목·소개 문구와 사용자 제공 이미지 기반 adaptive icon/테마 실루엣 적용. 원본은 mobile/android/artwork에 보존했다. backend·MQTT·보안 정책 변경 없음.
+- 최종 clean debug 검증 exit0/PASS, 56작업 새 실행·JVM9개 실패0/오류0/건너뜀0. 빈 폴더 정리 뒤 최종 Lint exit0/PASS, 오류0/경고9(5실행/25재사용). 마지막 Lint는 앞 JVM·APK 성공 결과를 재사용했다. 실패기반 자동수정2/5, 상세 tasks/ANDROID_BRANDING.md.
+- UI 앱의 서버 설정을 로컬 보존·복원하고 전체 XML 일치를 확인했다. 서명이 다른 기존 앱 교체·정식 debug APK 설치·preview 제거 완료. 폰 최종 패키지는 com.juca.hydroponic 하나다. 미확정 요청 없음, 실제 설정 값은 출력·기록하지 않았다.
+- 실제 폰에서 이름·아이콘·상단 제목 확인, install Success·시작 Status: ok. APK .tools/android-branding/ppossak-debug.apk, 앱 정보/최종 UI 캡처 phone-info.png·phone-final.png(Git 제외). 이전 별도 설치 기록은 아래 이력이며 현재 두 앱 상태가 아니다.
+- 서버는 연결하지 않아 저장된 주소의 연결 실패 안내가 표시된다. 앱 데이터 화면/서버 종단·실물·모든 런처 모양 검증은 이번 작업 NOT RUN. 커밋·푸시 없음. 다음: 사용자 폰 UI 리뷰.
+
+---
+
+# Android debug UI 별도 설치 — 2026-10-26
+
+- 사용자 요청: 폰에서 debug APK로 UI 확인. 기존 앱과 새 APK의 서명이 달라, 사용자가 기존 앱 유지·UI 확인용 별도 설치를 선택했다.
+- main b0a2d82의 앱 소스를 변경하지 않고 Git 제외 .tools/debug-apk/preview.init.gradle 및 preview-manifest.xml로 debug applicationIdSuffix=.preview, 표시 이름 `영양액 기록 · UI`만 적용했다. 패키지는 com.juca.hydroponic.preview다.
+- JDK21·Android API36/Build Tools35.0.0 사용. Gradle8.13 Wrapper 다운로드 시간 초과·연결 초기화 2회 후 공식 직접 다운로드와 공식 SHA256 비교를 통과한 동일 버전 Gradle을 .tools/gradle-runtime에서 실행했다. 저장소 빌드 설정은 변경하지 않았다.
+- 기본 debug: testDebugUnitTest lintDebug assembleDebug exit0/PASS, 55개 작업 새 실행. JVM9개 실패0/오류0/건너뜀0, Lint 오류0/경고9. UI 별도 APK: 로컬 init script로 assembleDebug lintDebug exit0/PASS, 50작업 중19실행/31재사용, Lint 오류0/경고9. JVM은 앞 기본 debug 결과이며 별도 APK에서 재실행하지 않았다.
+- 로컬 manifest 이름 충돌 1회는 tools:replace 지정으로 해결했다. 앱 소스·검사 조건 변경 없음. 보조 빌드 설정 수정1/5.
+- 사용자가 USB 디버깅을 승인한 연결 폰에 adb install -r Success, am start -W Status: ok. 기존/preview 두 패키지 공존 확인. 기존 앱 삭제·데이터 초기화 없음. 캡처로 설정 화면·정원 테마·한글 표시 확인. 상태 VERIFIED(설치·초기 UI 범위).
+- APK: .tools/debug-apk/hydroponic-ui-debug.apk, 캡처: .tools/debug-apk/phone-ui.png(Git 제외). 서버·DB·MQTT·센서는 시작하지 않았다. 데이터 화면·앱 종단·실물 시험은 이번 작업 NOT RUN. 전체 UI를 보려면 서버 연결이 필요하다.
+- 추적 변경은 이 인계 기록뿐이며 커밋·푸시 없음. 기존 미추적 .codex-remote-attachments/ 보존. 다음: 사용자 폰 UI 확인, 필요 시 별도 서버 연결. 커밋 초안: docs: record debug UI preview installation.
+
+---
+
 # 수경재배 전환 Git 통합 — 2026-10-26
 
 - 사용자 명시 지시: 에이전트/하네스 규칙에 따라 현재 수경재배 전환 변경을 커밋하고 PR 생성, CI 확인, main 병합까지 진행한다. 이 지시는 앞선 UI 디자인 리뷰 후 Git 처리 지시를 갱신한다.
