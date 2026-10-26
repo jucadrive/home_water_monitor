@@ -1,0 +1,8 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <!-- Silhouette for the launcher's optional system-tinted icon mode. -->
+    <group android:pivotX="54" android:pivotY="54" android:scaleX="0.8" android:scaleY="0.8">
+        <path android:fillColor="#000000" android:pathData="M26,66 C26,48 36,39 54,39 C72,39 82,50 82,66 C82,82 71,87 54,87 C37,87 26,82 26,66 Z M54,41 C32,39 23,29 29,22 C35,16 50,21 54,35 Z M54,41 C52,25 61,10 72,12 C84,14 81,34 57,41 Z" />
+    </group>
+</vector>

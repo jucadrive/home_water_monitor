@@ -6,12 +6,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import com.juca.hydroponic.*
+import com.juca.hydroponic.R
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -30,7 +32,7 @@ import kotlinx.coroutines.delay
     GardenTheme {
         Scaffold(topBar = {
             TopAppBar(title = { Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                Sprout(Modifier.size(36.dp)); Spacer(Modifier.width(8.dp)); Text("작은 정원", style = MaterialTheme.typography.titleLarge)
+                Sprout(Modifier.size(36.dp)); Spacer(Modifier.width(8.dp)); Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleLarge)
             } }, navigationIcon = {
                 if (state.screen != Screen.LIST && state.origin.isNotBlank()) TextButton(onClick = vm::back, enabled = !state.busy) { Text("뒤로") }
             }, actions = { if (state.screen != Screen.SETTINGS) TextButton(onClick = vm::settings, enabled = !state.busy) { Text("설정") } })
