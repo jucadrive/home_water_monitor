@@ -1,4 +1,11 @@
+> **2026-10-26 후속 승인:** 단일 사용자 로그인·Keystore 토큰 보관·HTTPS 개인 서버 연동을 tasks/SINGLE_USER_AUTH_DEPLOYMENT.md에 따라 진행한다. 아래 기존 검증 결과는 새 인증 검증이 아니다.
+
 # Android 개발·검증
+
+## 개인용 인증 앱
+- 서버 주소/장치 설정 저장 후 본인 계정으로 로그인한다. 회원가입은 없고, 계정·비밀번호 해시는 개인 서버 외부 설정으로 준비한다. [수동 배포](PERSONAL_DEPLOYMENT.md)를 따른다.
+- 토큰은8시간 만료·서버 재시작 시 무효화되며 자동 갱신하지 않는다. 비밀번호는 저장하지 않고 토큰만 Keystore 키로 암호화한다. 재로그인 뒤 기존 미확정 요청은 같은 요청 재시도를 사용한다. 로그아웃은 서버 작업 취소가 아니다.
+- 인증 전 소프트웨어 인수의 계수는 아래 이력이다. 2026-10-27 인증 앱은 JVM15개·에뮬레이터9개를 통과했다. 실제 폰/공개 HTTPS는 아직 NOT RUN이며 세부 결과는 tasks/SINGLE_USER_AUTH_DEPLOYMENT.md.
 
 ## 별도 빌드 루트
 - mobile/android: Kotlin2.2.21·Compose BOM2025.12.01·AGP8.13.2·Gradle8.13, minSdk26/targetSdk36, Java/Kotlin bytecode17. 실행 JDK21 권장.

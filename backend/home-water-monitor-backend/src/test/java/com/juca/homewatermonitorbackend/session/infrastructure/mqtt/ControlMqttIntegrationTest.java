@@ -47,6 +47,7 @@ class ControlMqttIntegrationTest {
     Reply request(String path,String body,UUID key) throws Exception {
         try(var client=HttpClient.newHttpClient()) {
             var b=HttpRequest.newBuilder(URI.create("http://127.0.0.1:"+environment.getProperty("local.server.port")+path)).timeout(java.time.Duration.ofSeconds(8));
+            b.header("Authorization", "Bearer " + com.juca.homewatermonitorbackend.security.AuthHttpFixture.token("http://127.0.0.1:" + environment.getProperty("local.server.port")));
             if(body!=null)b.header("Content-Type","application/json").header("Idempotency-Key",key.toString()).POST(HttpRequest.BodyPublishers.ofString(body));
             else b.GET();
             var response=client.send(b.build(),HttpResponse.BodyHandlers.ofByteArray());

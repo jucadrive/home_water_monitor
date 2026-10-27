@@ -14,11 +14,15 @@ import org.json.JSONObject
 
 class MonitorViewModel(application: Application) : AndroidViewModel(application) {
     private val prefs = MonitorPreferences(application)
-    private val mutable = MutableStateFlow(MonitorState(origin = prefs.origin, device = prefs.device, pending = prefs.pending))
+    private val vault = OwnerSessionVault(application)
+    private val mutable = MutableStateFlow(MonitorState(origin = prefs.origin, device = prefs.device, pending = prefs.pending,
+        authenticated = vault.read(prefs.origin) != null))
     val state = mutable.asStateFlow()
-    private val runner = MutationRunner(prefs) { MonitorApi(it, BuildConfig.DEBUG) }
-    private fun api() = MonitorApi(mutable.value.origin, BuildConfig.DEBUG)
-    init { if (prefs.origin.isNotEmpty()) list() }
+    private fun remote(origin: String) = MonitorApi(origin, BuildConfig.DEBUG, vault.read(origin)?.accessToken)
+    private val runner = MutationRunner(prefs, ::remote)
+    private val owner = OwnerSessionClient(vault, { origin, token -> MonitorApi(origin, BuildConfig.DEBUG, token) })
+    private fun api() = remote(mutable.value.origin)
+    init { if (mutable.value.authenticated) list() }
 
     private fun call(block: suspend () -> Unit) {
         if (mutable.value.busy) return
@@ -27,6 +31,12 @@ class MonitorViewModel(application: Application) : AndroidViewModel(application)
             try { block() }
             catch (e: CancellationException) { throw e }
             catch (e: Exception) {
+                if (e is ApiException && e.status == 401) {
+                    vault.clear(mutable.value.origin)
+                    mutable.value = MonitorState(origin = prefs.origin, device = prefs.device, pending = prefs.pending,
+                        busy = true, error = "로그인이 필요합니다. 확인 중인 요청은 보존했습니다.")
+                    return@launch
+                }
                 val text = if (e is ApiException) "요청 실패: ${e.code} (${e.status})" else e.message ?: "서버에 연결하지 못했습니다."
                 mutable.update { it.copy(error = text) }
             } finally { mutable.update { it.copy(busy = false, pending = prefs.pending) } }
@@ -38,8 +48,19 @@ class MonitorViewModel(application: Application) : AndroidViewModel(application)
         check(prefs.pending == null || prefs.pending?.origin == normalized) { "확인 중인 요청의 서버 주소를 유지하세요." }
         if (device.isNotEmpty()) Endpoint.device(device)
         prefs.origin = normalized; prefs.device = device
-        mutable.update { it.copy(origin = normalized, device = device, deviceStatus = null) }
+        val authenticated = vault.read(normalized) != null
+        mutable.value = MonitorState(origin = normalized, device = device, pending = prefs.pending, busy = true, authenticated = authenticated)
+        if (authenticated) loadList(false)
+    }
+    fun login(username: String, password: String) = call {
+        val origin = Endpoint.origin(mutable.value.origin, BuildConfig.DEBUG)
+        owner.login(origin, username, password)
+        mutable.update { it.copy(authenticated = true) }
         loadList(false)
+    }
+    fun logout() = call {
+        try { owner.logout(mutable.value.origin) }
+        finally { mutable.value = MonitorState(origin = prefs.origin, device = prefs.device, pending = prefs.pending, busy = true) }
     }
     fun list(more: Boolean = false) = call { loadList(more) }
     private suspend fun loadList(more: Boolean) {
@@ -122,7 +143,7 @@ class MonitorViewModel(application: Application) : AndroidViewModel(application)
     private fun mutate(kind: String, path: String, context: String?, body: () -> JSONObject) = call {
         handle(runner.execute(mutable.value.origin, path, body().toString(), kind, context))
     }
-    fun retryPending() = call { handle(runner.retry(mutable.value.origin)) }
+    fun retryPending() = call { check(mutable.value.authenticated) { "먼저 로그인하세요." }; handle(runner.retry(mutable.value.origin)) }
     fun abandonPending() { if (!mutable.value.busy) { prefs.pending = null; mutable.update { it.copy(pending = null) } } }
     private suspend fun handle(result: MutationResult) {
         when (result.request.kind) {
@@ -139,7 +160,7 @@ class MonitorViewModel(application: Application) : AndroidViewModel(application)
         when (mutable.value.screen) {
             Screen.SESSION -> mutable.update { it.copy(screen = it.sessionParent) }
             Screen.MAINTENANCE, Screen.COMMAND -> if (mutable.value.detail != null) detail(mutable.value.detail!!.cultivation.id) else unlinked()
-            Screen.SETTINGS -> if (mutable.value.origin.isNotEmpty()) list()
+            Screen.SETTINGS -> if (mutable.value.authenticated) list()
             else -> list()
         }
     }

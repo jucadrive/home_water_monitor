@@ -1,0 +1,25 @@
+# Last overlay after compose.yml + compose.mqtt.yml. Keep the existing base untouched.
+services:
+  broker:
+    command: ["-c", "/mosquitto/config/mosquitto-lan.conf"]
+    ports:
+      - "${PPOSSAK_MQTT_LAN_IP:?Private LAN IPv4 required}:8883:8883"
+    volumes:
+      - type: bind
+        source: ./mosquitto-lan.conf
+        target: /mosquitto/config/mosquitto-lan.conf
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./secrets/mqtt-lan/certs/server.crt
+        target: /run/secrets/mqtt-server.crt
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./secrets/mqtt-lan/certs/server.key
+        target: /run/secrets/mqtt-server.key
+        read_only: true
+        bind:
+          create_host_path: false

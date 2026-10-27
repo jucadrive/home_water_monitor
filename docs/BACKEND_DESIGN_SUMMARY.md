@@ -1,3 +1,7 @@
+> **2026-10-26 개인용 후속 승인:** 뽀싹의 단일 사용자 목적·Spring Security 인증·앱 연동·미니 PC/Tunnel 배포는 [작업 명세](tasks/SINGLE_USER_AUTH_DEPLOYMENT.md)를 따른다. 회원 DB·기존 원본/통계·MQTT 변경 없이 진행하며 실물 인수는 보류한다.
+
+> 현재 소스 기준의 기술적 설계 근거·기능별 코드 흐름·검증 실습은 [백엔드 읽기 안내](backend/README.md)에서 시작한다. 아래 문서의 기존 합의/초안 이력은 보존하며 현재 구현과 구분한다.
+
 > **2026-10-26 전환 합의:** [HYDROPONIC_MVP.md](HYDROPONIC_MVP.md)의 재배·관리·START 연결과 Kotlin/Compose 안드로이드 앱을 승인했다. 신규 업무는 cultivation 계층을 추가하고 기존 measurement domain·원본·통계·MQTT 계약을 보존한다. START 예약에 재배 FK를 고정하고 실제 결과는 sessionId/deviceId로 연결한다. 아래 순차 설계 기록은 당시 상태이며 현재 상태는 HANDOFF.md를 따른다.
 
 > **운영 전환(2026-10-21):** [루트 AGENTS.md](../AGENTS.md)·[Harness.md](Harness.md)를 따른다. 과거 학습·직접 작성 문구는 이력이며 현재 실행 지시가 아니다. 업무 정책과 미정 계약은 유지한다.

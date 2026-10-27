@@ -5,6 +5,7 @@
 
 typedef struct {
     const char *ssid, *wifi_password, *broker_uri, *device_id, *username, *password;
+    const char *ca_pem;
     bool open_wifi;
 } hwm_transport_config;
 typedef enum {

@@ -1,0 +1,23 @@
+# Dedicated personal deployment; never expose the raw API port on the LAN/WAN.
+server:
+  address: 127.0.0.1
+  port: ${PPOSSAK_API_PORT:18080}
+  forward-headers-strategy: none
+  tomcat:
+    accesslog:
+      enabled: false
+spring:
+  datasource:
+    url: ${PPOSSAK_DB_JDBC_URL:jdbc:postgresql://127.0.0.1:15433/ppossak}
+  jpa:
+    show-sql: false
+  mvc:
+    log-request-details: false
+water-monitor:
+  mqtt:
+    enabled: false
+  control:
+    enabled: false
+logging:
+  level:
+    org.springframework.security: INFO

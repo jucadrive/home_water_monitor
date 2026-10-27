@@ -1,0 +1,54 @@
+# Opt-in overlay: -f compose.yml -f compose.mqtt.yml
+# No host/LAN port yet: physical ESP32 networking is a later acceptance phase.
+services:
+  backend:
+    command:
+      - --water-monitor.mqtt.enabled=true
+      - --water-monitor.control.enabled=true
+    env_file:
+      - path: secrets/mqtt/mqtt.env
+        format: raw
+    depends_on:
+      broker:
+        condition: service_healthy
+  broker:
+    image: eclipse-mosquitto:2.0.22
+    user: "1883:1883"
+    entrypoint: ["/usr/sbin/mosquitto"]
+    command: ["-c", "/mosquitto/config/mosquitto.conf"]
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    volumes:
+      - type: bind
+        source: ./mosquitto.conf
+        target: /mosquitto/config/mosquitto.conf
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./secrets/mqtt/mosquitto.passwd
+        target: /run/secrets/mosquitto.passwd
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./secrets/mqtt/mosquitto.acl
+        target: /run/secrets/mosquitto.acl
+        read_only: true
+        bind:
+          create_host_path: false
+      - mqtt_data:/mosquitto/data
+    healthcheck:
+      test: [CMD, sh, -ec, "nc -z 127.0.0.1 1883"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+volumes:
+  mqtt_data:

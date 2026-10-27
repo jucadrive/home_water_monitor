@@ -3,6 +3,7 @@
 ## 1. Project Overview
 - 수경재배 영양액의 TDS 추세와 재배·물 관리 이력을 관측한다. TDS로 안전성·식물 건강·영양소 상태·교체 시점을 확정하지 않는다.
 - 클라이언트는 Kotlin·Jetpack Compose 안드로이드 앱이다. 웹사이트는 구현 범위 밖이다.
+- 뽀싹은 본인용 단일 사용자·개인 서버 앱이다. 실생활의 불편을 AI 에이전트와 해결한 경험·검증 근거를 기록하며 다중 회원·농업 성과를 임의로 주장하지 않는다.
 - Android Gradle 루트는 mobile/android다. AGP8.13.2·Gradle8.13·Kotlin2.2.21·Compose BOM2025.12.01·SDK36을 사용하며 실행 JDK21을 권장한다(backend JDK25와 구분).
 - Git 루트는 이 폴더, Gradle 루트는 backend/home-water-monitor-backend다.
 - Java 25, Spring Boot 4.1.1, Gradle Wrapper 9.8.1, PostgreSQL 18을 사용한다.
@@ -14,6 +15,10 @@
 - 설계 합의: docs/BACKEND_DESIGN_SUMMARY.md.
 - 전환 배경: MIGRATION.md. 현재 승인 범위·모바일 변경은 docs/tasks/HYDROPONIC_MIGRATION.md를 따른다.
 - 현재 제품 명세: docs/HYDROPONIC_MVP.md. 기존 제품 명세는 docs/HOME_WATER_MONITOR_CODEX_SPEC_PAIR_PROGRAMMING.md에 이력으로 보존한다.
+- 현재 후속 승인: docs/tasks/SINGLE_USER_AUTH_DEPLOYMENT.md. 단일 계정·Spring Security·앱 토큰 연동·미니 PC/Tunnel/HTTPS 인수이며 실물 시험은 보류한다.
+- 2026-10-27 사용자 지시로 서버 배포는 사용자가 직접 한다. 별도 재개 지시 전 미니 PC SSH·원격 조작을 하지 않으며 docs/PERSONAL_DEPLOYMENT.md의 수동 자료만 제공한다.
+- 실물 없는 MQTT 준비 승인: docs/tasks/PERSONAL_MQTT_READINESS.md. Docker 내부 브로커·인증/ACL·모의 인수만 지금 수행하며 LAN 공개·실물/펌웨어 업로드는 보류한다.
+- 2026-10-27 실물 재개 승인: docs/tasks/PERSONAL_DEVICE_ACCEPTANCE.md. LAN 전용 TLS·개인 설정·펌웨어/실측 인수를 진행하며 서버 원격 조작 금지는 유지한다.
 - 원본 비교 정책: docs/NEXT_MEASUREMENT_COMPARISON.md. 구현·검증 상태는 실제 소스와 HANDOFF를 확인한다.
 - 구축·기능별 인수 조건과 승인 범위는 docs/tasks/에 기록한다.
 - 과거 페어 프로그래밍·사용자 직접 작성 지침은 현재 운영 규칙이 아니다.
@@ -44,6 +49,7 @@
 - 동작 변경에는 인수 조건을 검증하는 관련 테스트를 추가·수정한다.
 - 실패를 숨기기 위한 테스트 삭제·약화·검사 비활성화를 하지 않는다.
 - 비밀번호·토큰·실제 환경변수 값은 출력·기록·커밋하지 않는다.
+- 인증 만료·로그아웃으로 미확정 업무 요청의 키·본문을 삭제하거나 다른 서버로 전송하지 않는다. 인증 비활성화로 운영·인수 실패를 우회하지 않는다.
 - .env·IDE 개인 설정·빌드 결과 제외는 루트 .gitignore에서 관리한다.
 - 의존성·인프라·보안 변경이 승인 범위를 벗어나면 중단한다.
 - 자동 검사가 없는 규칙은 리뷰 규칙이며 기술적으로 강제된다고 주장하지 않는다.

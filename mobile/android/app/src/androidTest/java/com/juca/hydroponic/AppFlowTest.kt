@@ -21,11 +21,14 @@ class AppFlowTest {
     private var originalOrigin: String? = null
     private var originalDevice: String? = null
     private var configured = false
+    private var originalAuth: Map<String, *> = emptyMap<String, String>()
     @get:Rule(order = 0) val preferences = object : TestWatcher() {
         override fun starting(description: Description) {
             val p = context.getSharedPreferences("monitor", Context.MODE_PRIVATE)
             assertNull("Resolve the existing app request before running isolated acceptance", p.getString("pending", null))
             originalOrigin = p.getString("origin", null); originalDevice = p.getString("device", null)
+            originalAuth = context.getSharedPreferences("owner_auth", Context.MODE_PRIVATE).all.toMap()
+            check(context.getSharedPreferences("owner_auth", Context.MODE_PRIVATE).edit().clear().commit())
             check(p.edit().putString("origin", "").putString("device", "").commit())
             configured = true
         }
@@ -33,6 +36,9 @@ class AppFlowTest {
             if (!configured) return
             check(context.getSharedPreferences("monitor", Context.MODE_PRIVATE).edit().putString("origin", originalOrigin)
                 .putString("device", originalDevice).remove("pending").commit())
+            val restored = context.getSharedPreferences("owner_auth", Context.MODE_PRIVATE).edit().clear()
+            originalAuth.forEach { (key, value) -> check(value is String); restored.putString(key, value) }
+            check(restored.commit())
         }
     }
     @get:Rule(order = 1) val compose = createAndroidComposeRule<MainActivity>()
@@ -40,6 +46,8 @@ class AppFlowTest {
         compose.waitUntil(30000) { compose.onAllNodesWithText(text, substring = substring).fetchSemanticsNodes().isNotEmpty() }
     }
     private fun clickIn(list: String, text: String) {
+        // A record name can still be visible in the previous screen while its detail HTTP calls complete.
+        compose.waitUntil(30000) { compose.onAllNodesWithTag(list).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithTag(list).performScrollToNode(hasText(text))
         compose.onNodeWithText(text).performClick()
     }
@@ -75,6 +83,10 @@ class AppFlowTest {
         compose.onNodeWithText("서버 주소").performScrollTo().performTextReplacement(origin)
         compose.onNodeWithText("장치 ID · 측정할 때 필요").performTextReplacement(device)
         compose.onNodeWithText("저장하고 연결").performScrollTo().performClick()
+        waitText("내 계정 로그인")
+        compose.onNodeWithText("계정 이름").performScrollTo().performTextInput("fixture-owner")
+        compose.onNodeWithText("비밀번호").performScrollTo().performTextInput("fixture-password-only")
+        compose.onNodeWithText("로그인", substring = false).performScrollTo().performClick()
         waitText("오늘의 재배 기록")
         screenshot("garden-empty")
         compose.onNodeWithText("재배 등록").performClick()
