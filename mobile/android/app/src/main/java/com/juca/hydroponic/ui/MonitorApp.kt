@@ -34,7 +34,7 @@ import kotlinx.coroutines.delay
             TopAppBar(title = { Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                 Sprout(Modifier.size(36.dp)); Spacer(Modifier.width(8.dp)); Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleLarge)
             } }, navigationIcon = {
-                if (state.screen != Screen.LIST && state.origin.isNotBlank()) TextButton(onClick = vm::back, enabled = !state.busy) { Text("뒤로") }
+                if (state.authenticated && state.screen != Screen.LIST) TextButton(onClick = vm::back, enabled = !state.busy) { Text("뒤로") }
             }, actions = { if (state.screen != Screen.SETTINGS) TextButton(onClick = vm::settings, enabled = !state.busy) { Text("설정") } })
         }) { padding ->
             Column(Modifier.fillMaxSize().padding(padding)) {
@@ -49,14 +49,14 @@ import kotlinx.coroutines.delay
                         Text("처리 결과를 확인할 요청이 있습니다.")
                         Text("새 요청을 만들지 않고 같은 키와 내용으로 재시도합니다.", style = MaterialTheme.typography.bodySmall)
                         Row {
-                            TextButton(onClick = vm::retryPending, enabled = !state.busy) { Text("같은 요청 재시도") }
+                            TextButton(onClick = vm::retryPending, enabled = !state.busy && state.authenticated) { Text("같은 요청 재시도") }
                             TextButton(onClick = { discard = true }, enabled = !state.busy) { Text("추적 중단") }
                         }
                     }
                 }
                 Box(Modifier.weight(1f)) {
                     when (state.screen) {
-                        Screen.SETTINGS -> SettingsScreen(state, vm::configure, vm::checkDevice)
+                        Screen.SETTINGS -> SettingsScreen(state, vm::configure, vm::checkDevice, vm::login, vm::logout)
                         Screen.LIST -> DashboardScreen(state, vm)
                         Screen.CREATE -> CultivationForm(state.busy || state.pending != null, vm::create)
                         Screen.DETAIL -> DetailScreen(state, vm)

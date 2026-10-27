@@ -11,7 +11,7 @@ class ApiException(val status: Int, val code: String) : IOException(code)
 interface Remote {
     suspend fun request(method: String, path: String, body: String? = null, key: String? = null): String
 }
-class MonitorApi(rawOrigin: String, debug: Boolean) : Remote {
+class MonitorApi(rawOrigin: String, debug: Boolean, private val accessToken: String? = null) : Remote {
     private val origin = Endpoint.origin(rawOrigin, debug)
     override suspend fun request(method: String, path: String, body: String?, key: String?): String = withContext(Dispatchers.IO) {
         require(path.startsWith("/api/") && !path.contains(".."))
@@ -22,6 +22,7 @@ class MonitorApi(rawOrigin: String, debug: Boolean) : Remote {
             connection.readTimeout = 10000
             connection.instanceFollowRedirects = false
             connection.setRequestProperty("Accept", "application/json")
+            if (path != "/api/auth/login" && accessToken != null) connection.setRequestProperty("Authorization", "Bearer $accessToken")
             key?.let { connection.setRequestProperty("Idempotency-Key", it) }
             if (body != null) {
                 connection.setRequestProperty("Content-Type", "application/json; charset=utf-8")

@@ -28,6 +28,14 @@ bin/
 !**/src/test/**/bin/
 
 # Local credentials; commit only empty/example templates
+auth.env
+postgres.env
+tunnel.token
+mqtt.env
+mqtt-lan.env
+device-mqtt.json
+mosquitto.passwd
+mosquitto.acl
 .env
 .env.*
 !.env.example
@@ -51,13 +59,19 @@ nbdist/
 sdkconfig
 sdkconfig.old
 sdkconfig.local
+sdkconfig.personal
+sdkconfig.personal.old
 managed_components/
 __pycache__/
 *.pyc
 /firmware/esp32/wifi.local.json
 /firmware/esp32/main/local_config.h
+/firmware/esp32/main/local_personal_config.h
 /infra/device-test/secrets.local.json
 /infra/device-test/private/
+/infra/personal/secrets/
+/infra/personal/app.jar
+/.codex-remote-attachments/
 
 # Android SDK locations and signing material
 local.properties

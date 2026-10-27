@@ -1,8 +1,18 @@
-# Hydroponic Nutrient Monitor
+# 뽀싹 — 개인 수경재배 기록 앱
+
+실생활에서 느낀 재배·영양액 관리의 불편을 단일 사용자 Android 앱과 개인 서버로 해결한다. AI 에이전트와 Harness Engineering으로 요구사항을 구체화하고 구현·검증·수정한 경험을 실제 증거와 함께 기록하는 것이 프로젝트의 주요 목적이다. 다중 회원 서비스와 농업 효과의 입증은 목표가 아니다.
+
+2026-10-26 승인: 단일 계정 인증 → 앱 인증 연동 → Ubuntu 미니 PC·Cloudflare Tunnel → HTTPS API 인수를 순차 진행한다. 주소는 `https://ppossak-api.jucadrive.com`이며 실물 장비 인수는 보류한다. 현재 진행·검증 상태는 [인계](docs/HANDOFF.md), 세부 계약·승인 범위는 [인증·배포 명세](docs/tasks/SINGLE_USER_AUTH_DEPLOYMENT.md)를 따른다. 아래 과거 전환 검증은 새 인증·배포 성공을 의미하지 않는다.
 
 기존 Home Water Monitor의 IoT 측정·보존 기반을 수경재배 영양액 TDS 추세와 재배·물 관리 이력 서비스로 확장한다. TDS로 식물 건강·영양소별 상태·안전성·교체 시점을 확정하지 않는다.
 
-2026-10-26 승인: 클라이언트는 Kotlin·Jetpack Compose 안드로이드 앱이며 웹사이트는 구현하지 않는다. 재배·관리·측정 연결/조회 백엔드는 Full204개 검증을 통과했고 앱은 APK/JVM9개/Lint 검증을 통과했다. 실제 폰(Android17) 화면·앱 종단5개도 통과했다. 소프트웨어 인수는 VERIFIED다. 현재 PR 통합은 사용자 승인 범위에서 진행 중이다. 실제 센서 장비 인수는 사용자 지시로 후속 검증하며 NOT VERIFIED다. 현재 상태는 [HANDOFF](docs/HANDOFF.md), 제품 정책은 [MVP](docs/HYDROPONIC_MVP.md), 승인·인수 조건은 [전환 명세](docs/tasks/HYDROPONIC_MIGRATION.md)를 따른다.
+클라이언트는 Kotlin·Jetpack Compose 안드로이드 앱이며 웹사이트는 구현하지 않는다. 제품 전환과 뽀싹 브랜드는 PR12·13으로 main에 통합했다. 전환 당시 backend204개·Android JVM9개·실제 폰 소프트웨어 종단5개는 과거 검증이며, 후속 인증 변경의 결과는 [HANDOFF](docs/HANDOFF.md)를 따른다. 제품 정책은 [MVP](docs/HYDROPONIC_MVP.md), 전환 이력은 [전환 명세](docs/tasks/HYDROPONIC_MIGRATION.md)에 보존한다. 실제 센서 장비 인수·교정·독립 정확도는 보류/NOT VERIFIED다.
+
+실제 미니 PC 배포는 사용자가 직접 진행한다. [Docker 수동 배포 안내](docs/PERSONAL_DEPLOYMENT.md)에 Windows 파일 준비·WinSCP 전송·백엔드/PostgreSQL/Tunnel 3개 컨테이너 실행·HTTPS API 인수·백업/복원 절차를 정리했다. 미니 PC에 JDK/cloudflared를 별도 설치하지 않는다. 실제 서버 적용 성공은 별도 확인한다.
+
+장비 없이 MQTT를 추가할 때는 [MQTT 서버 준비](docs/PERSONAL_MQTT.md)를 따른다. 기본 Compose에 추가 파일을 병합해 Mosquitto를 실행하고, 실제 ESP32의 LAN/TLS/Wi-Fi·실측 인수는 집에서 별도로 진행한다.
+
+백엔드의 설계 근거·Java/Spring 실행 흐름·로컬 검증 실습은 [백엔드 읽기 안내](docs/backend/README.md)에 정리했다. 실제 클래스·메서드·테스트와 연결하며 현재 구조의 대안과 한계도 함께 설명한다.
 
 현재 SEN0244는 0~1000ppm·미교정·25°C 가정이다. 교정·독립 정확도는 NOT VERIFIED이며 대상 영양액의 측정 범위 적합성을 확인해야 한다.
 

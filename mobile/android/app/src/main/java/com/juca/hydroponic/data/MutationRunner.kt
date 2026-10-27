@@ -27,7 +27,7 @@ class MutationRunner(private val storage: MutationStorage, private val remote: (
             return MutationResult(request, result)
         } catch (e: ApiException) {
             // 408/429 and server/transport failures remain uncertain; all retries keep the exact key and payload.
-            if (e.status in 400..499 && e.status !in listOf(408, 429)) storage.pending = null
+            if (e.status in 400..499 && e.status !in listOf(401, 403, 408, 429)) storage.pending = null
             throw e
         }
     }

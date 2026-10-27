@@ -32,6 +32,7 @@ class CultivationIntegrationTest {
     }
     java.net.http.HttpResponse<String> http(String path,String method,String body,UUID key) throws Exception {
         var b=java.net.http.HttpRequest.newBuilder(java.net.URI.create("http://localhost:"+port+path));
+        b.header("Authorization", "Bearer " + com.juca.homewatermonitorbackend.security.AuthHttpFixture.token("http://localhost:" + port));
         if(key!=null)b.header("Idempotency-Key",key.toString());
         b.header("Content-Type","application/json");
         return java.net.http.HttpClient.newHttpClient().send(b.method(method,java.net.http.HttpRequest.BodyPublishers.ofString(body)).build(),

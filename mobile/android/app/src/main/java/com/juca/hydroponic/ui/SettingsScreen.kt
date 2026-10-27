@@ -13,7 +13,8 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import com.juca.hydroponic.BuildConfig
 import com.juca.hydroponic.MonitorState
 
-@Composable fun SettingsScreen(s: MonitorState, save: (String, String) -> Unit, checkDevice: () -> Unit) {
+@Composable fun SettingsScreen(s: MonitorState, save: (String, String) -> Unit, checkDevice: () -> Unit,
+    login: (String, String) -> Unit = { _, _ -> }, logout: () -> Unit = {}) {
     val context = LocalContext.current
     var licenses by remember { mutableStateOf<String?>(null) }
     var origin by rememberSaveable(s.origin) { mutableStateOf(s.origin) }
@@ -26,7 +27,14 @@ import com.juca.hydroponic.MonitorState
         OutlinedTextField(device, { device = it }, label = { Text("장치 ID · 측정할 때 필요") }, singleLine = true,
             enabled = !s.busy, modifier = Modifier.fillMaxWidth())
         Button(onClick = { save(origin.trim(), device.trim()) }, enabled = !s.busy && origin.isNotBlank(), modifier = Modifier.fillMaxWidth()) { Text("저장하고 연결") }
-        if (s.origin.isNotEmpty() && s.device.isNotEmpty()) OutlinedButton(onClick = checkDevice, enabled = !s.busy) { Text("저장된 장치 상태 확인") }
+        if (s.origin.isNotEmpty()) {
+            if (s.authenticated) {
+                Text("개인 계정으로 로그인됨")
+                OutlinedButton(onClick = logout, enabled = !s.busy) { Text("로그아웃") }
+                Text("로그아웃은 진행 중인 서버 작업을 취소하지 않습니다.", style = MaterialTheme.typography.bodySmall)
+            } else OwnerLogin(s.busy, login)
+        }
+        if (s.authenticated && s.device.isNotEmpty()) OutlinedButton(onClick = checkDevice, enabled = !s.busy) { Text("저장된 장치 상태 확인") }
         s.deviceStatus?.let { Text(it) }
         TextButton(onClick = {
             licenses = listOf("gowun_dodum", "gamja_flower").joinToString("\n\n") { name ->

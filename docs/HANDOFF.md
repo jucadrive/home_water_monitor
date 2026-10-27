@@ -1,3 +1,93 @@
+# 인증·배포·장비·문서 Git 통합 — 2026-10-27
+
+- 사용자 명시 승인: 지금까지의 코드/문서/배포 양식을 비밀·개인 설정·위험 산출물을 제외하고 stage/commit/push/PR/main 병합까지 수행한다. 기존 codex/single-user-auth-deployment를 사용하며 force push·브랜치 삭제·서버 배포는 포함하지 않는다.
+- 포함 범위: backend owner 인증/HTTP 테스트·Android Keystore/login/미확정 요청 보존·Docker3서비스+MQTT/LAN TLS 추가 구성·개인 ESP32 설정/시간/만료 검증·수동 배포/실물 인수·백엔드 기술 가이드/검증 도구.
+- 제외 범위: 실제 auth/DB/MQTT/Tunnel 파일·CA/서버key·Wi-Fi/개인 헤더·sdkconfig 개인본/백업·JAR/APK/bin·빌드/SDK 캐시·로컬 증거/도구·첨부 이미지. 루트 ignore에 개인 파일·첨부·배포 산출물 보호를 추가하며 공개 시험 fixture와 설정 생성 코드는 포함한다.
+- 기존 성공 근거: backend216·Android JVM15/Lint0errors11warnings/에뮬레이터9, 설정 도구·독립 Docker/MQTT/TLS 인수, 최종 ESP32 build/기간 검증 guard/실측60·보존/해제. backend/앱 변경 없이 성공 검사를 임의 반복하지 않고, 푸시 SHA 및 PR/main의 backend Full CI를 확인한다. 정적/아키텍처 검사는 MISSING이다.
+- 현재 인수 결과는 아래 체크포인트와 기능 명세를 따른다. 최종 커밋·PR·병합 SHA와 CI는 Git/해당 PR/Actions 이력이 기준이다. 커밋 초안: feat: add personal authentication and secure ESP32 deployment.
+
+---
+
+# 개인 서버·ESP32 정상 경로 검증 — 2026-10-27
+
+- 사용자 집에서 재개·전체 계획 승인. 서버 원격 조작 금지는 유지하며 사용자 수동 서버 적용, LAN TLS/개인 설정/업로드/실측 인수만 진행한다. 상세 tasks/PERSONAL_DEVICE_ACCEPTANCE.md·PERSONAL_DEVICE_SETUP.md.
+- CH340 COM3, UART STATUS IDLE/sessionnone/원본0, 기존 Wi-Fi/MQTT 미연결 확인. 기존 미커밋·첨부/인덱스·bench 비밀/header를 보존했다. 사용자 로컬 숨김 Wi-Fi 입력 완료.
+- TLS 추가 Compose·RFC1918 CA/서버 인증서/개인 헤더 도구·SNTP 후 MQTT gate·Personal 빌드 옵션을 구현했다. 특정 LAN8883만TLS, 내부1883/기존계정·ACL·볼륨·DB loopback 보존. authority/ca.key는 PC에만 유지한다.
+- 로컬 단위5개/실제 TLS 인수5그룹 모두 새 실행PASS·exit0, 독립 시험 자원 정리exit0. 잘못된 CA/peer IP·계정·금지 발행 거절. 결과 .tools/deployment/ppossak-tls-check-9833687675/result.json. 최초 해시 도구 준비1회 실패의 원인은 미확정, 독립 공개 fixture 성공 후 같은검증PASS. 상세 명세 참조.
+- 고정 IDF credential-free 및 개인 설정 포함 ADS1115/MQTT 빌드PASS. 실제 개인 binary948576bytes·앱1MiB의10% 여유. 자동 Flash1회는 wrong boot mode0x13으로 쓰기 전 실패했으나, 사용자 수동 BOOT/EN 후 Flash exit0/각 이미지 hash verified/PASS. NVS 전체 삭제 없음. 사용자가 서버 LAN TLS 적용/포트를 확인했다.
+- 최초 UART 원본seq1~60/각1회·fault0·해제/IDLE PASS, 사용자 앱 ACCEPTED/NORMAL/RELEASE_CONFIRMED/FRESH/60/ADS1115 및 DB NORMAL/원본60/통계50/실제60/sen0244-uncalibrated-v1 확인. 첫 증거 .tools/esp32-personal/accept-b574333ab0304a3ab9a23c15aa6ae167.json. 단 최종 검토에서 SDK 기간 검증 옵션OFF를 발견해 아래 수정 후 다시 인수했다.
+- 보안 보완1/5: SNTP만으로 기간 검증이 켜진다고 가정한 부분 정정. 개인 sdkconfig.personal에 MBEDTLS_HAVE_TIME_DATE=y 강제·기본값 명시·main guard 추가, 기존 bench config 보존. guard OFF거절/ON통과 C 전처리 검사PASS, 최종 전체1024작업 빌드PASS·설정 헤더확인·ESP_TLS_INSECURE 꺼짐. 최종binary949632bytes·파티션9%여유, SHA256 B5728F01D447BAC37A5659FDE36E499E8C1862DCFBD3A6343F987AC62359990F.
+- 최종 수동 Flash/hash verified/PASS 후 실제 TLS/MQTT 재연결·정상 실측 회귀1회 PASS. 직접 seq1~60/센서fault0/보존 확인 뒤BUFFER_RELEASED/최종IDLE·원본0·MQTT유지, min_heap40752. 최종 증거 .tools/esp32-personal/accept-15c5c1a8f96a45c4873d83e0672d6c02.json. 사용자 앱 ACCEPTED/NORMAL/RELEASE_CONFIRMED/원본60/ADS1115 확인. 두 번째 DB 직접 조회/전 필드 값 대조는 NOT RUN.
+- read-only 관측기 단위3개 PASS, TLS/개인 설정 단위5개·로컬 TLS5그룹 PASS. 종합 근거 .tools/esp32-personal/normal-flow-verification.json. 초기 TIME_READY 부팅 로그 자체는 미수집이며 SNTP gate/기간 옵션과 실제 TLS 준비/송수신 경로로 판단한다. 정상2회와 로컬 인수 범위 VERIFIED, 장기/전체 장애/교정/독립 정확도·실수온은 별도 NOT VERIFIED다.
+- 신규6파일 TLS 업로드 묶음은 .tools/deployment/mqtt-lan-upload. 서버 적용/앱/DB는 사용자 보고이며 에이전트 SSH·원격 명령0·커밋/푸시0. 기존 미커밋/인덱스/첨부 보존·AGENTS118줄·적용 마이그레이션/센서·세션 도메인 변경0. 다음은 정상 사용 관찰과 별도 교정/장기/장애 검증 계획이며 전체 DONE은 최종 리뷰 후다.
+
+---
+
+# 백엔드 기술 해설·검증 안내 — 2026-10-27 (이전 체크포인트)
+
+- 문서 범위 VERIFIED: docs/backend/README.md부터 ARCHITECTURE.md·EXECUTION_FLOWS.md·VERIFICATION_WORKBOOK.md로 연결한다. 상세 인수/검증은 tasks/BACKEND_TECHNICAL_GUIDE.md. 기존 설계/구현 이력은 보존하고 현재 소스의 근거·실제 의존성·대안·한계·실행/검증 경계를 별도로 설명한다.
+- 내용: 단일 프로세스/DB 구조, domain/JPA 분리·BigDecimal, 트랜잭션 프록시/PK 경합 복구, HTTP 멱등성, MQTT 커밋/확인·유실, 비동기 명령/관측, 인증 필터/메모리 토큰, 조회 출처/시각/비용. 기동+주요7개 기능을 메서드·스레드·트랜잭션·정상/실패 종료까지 추적한다.
+- 실습은 예측→추적→로컬 재현→관측→한계 설명8종, 추가 Java 테스트 예시·기록 양식. 운영 DB/서버 조작을 실습에 포함하지 않으며 문서 완성을 독자의 학습/재현 완료로 판정하지 않는다.
+- 최종 문서 검사 exit0/PASS: 로컬 링크/앵커84개·현재 클래스/메서드 참조62개·테스트 선택 대상15개 존재 확인, Java 예시1개 JDK25 컴파일/직접 호출 assertion PASS. 결과 .tools/backend-guide/result.json. Gradle/통합/전체 테스트 새 실행은 아님. 임시 검사기에서 '.java' 링크를 메서드로 오인한 부분1회 보완 후 PASS.
+- 변경은 가이드4종·진입 링크·기술 작업/인계 문서뿐이다. 이번 작업의 애플리케이션/배포/DB/펌웨어 변경·서버/장비 접근0. 기존 미커밋·인덱스/첨부 보존, 커밋/푸시0, AGENTS117줄 유지. 다음은 가이드 읽기와 독립 로컬 실습이다.
+
+---
+
+# 실물 없는 개인 서버 MQTT 준비 — 2026-10-27 (이전 체크포인트)
+
+- 사용자 승인 범위 구현·로컬 인수 VERIFIED. 실제 미니 PC SSH/원격 조작/운영 MQTT 적용·ESP32·LAN/TLS·실측/펌웨어 업로드 NOT RUN. 서버 적용은 사용자 직접 진행하며 상세 docs/PERSONAL_MQTT.md·tasks/PERSONAL_MQTT_READINESS.md.
+- 사용자 보고: 기존 HTTPS 배포·앱 로그인/API·SSH/DBeaver DB 조회/식물 등록 데이터 확인 성공. 에이전트 직접 관측이 아니며 새 MQTT 또는 실물 인수의 근거로 확대하지 않는다.
+- infra/personal/compose.mqtt.yml로 기존 compose.yml에4번째 broker를 추가한다. 기본파일/DB15433 loopback/기존 인증 원본/운영 볼륨을 교체하지 않는다. MQTT/제어는 CLI 속성으로 활성화하며 기존 운영 JAR/DB 스키마/메시지 계약/펌웨어 변경0. 새 JAR 전송/빌드 불필요.
+- Mosquitto2.0.22 비루트 UID1883·읽기 전용·전용 영속 볼륨·인증/장비별 방향 ACL. 호스트/LAN/WAN 포트 미공개. scripts/create-personal-mqtt.py는 NEW MQTT 전용 파일만 생성하며 덮어쓰기 거부, 원문 비밀번호는 stdin으로 해시 도구에 전달하고 명령 인수/출력에 포함하지 않는다. 장비용 device-mqtt.json은 개발 PC에만 보관한다.
+- 단위5개 새 실행 PASS(실패0/오류0/건너뜀0·exit0). 기존 파일 보존·입력 주입 거절·실패 시 신규 파일만 정리·방향 ACL·비밀번호 stdin/분리/해시 파일 평문 미포함 검증. 최초4개 PASS 이후 보강한5개는 sandbox 임시 폴더 권한으로4errors, 코드 수정 없이 승인 환경 재실행5PASS. 환경 문제/검증 조건 약화 없음.
+- Docker 새 종단 인수9그룹 exit0/PASS: 실제4서비스 설정/포트미공개·백엔드 로그인 유지·MQTT 익명/오류 비밀번호 거절·방향/타장비 발행 ACL·금지 읽기, 최초/브로커 재시작/백엔드 재시작의 START→상태→결과→DB커밋 확인 후 보존 확인→해제, SIMULATED 표시/실측 추세 제외,3세션180원본/재배 보존·이전 앱 토큰 거절. 결과 .tools/deployment/ppossak-mqtt-check-353e1d1da9/result.json.
+- 추가 실제 Linux 파일 권한 인수1개 exit0/PASS: root:1883/640의 passwd/ACL을1883만 읽고 다른 UID10001은 거절. 같은 폴더 permissions.json. 실험 파일은 독립 시험 계정만 사용하며 사용자 실제 비밀은 읽거나 수정하지 않았다. 모든 이번 시험 컨테이너/볼륨 정리 exit0.
+- Mosquitto digest sha256:09b62ff32c2e7b64d4b431b9a89236073289b68db273de2b089edeb9b0d92b5c, Paho는 운영 JAR의1.2.5 재사용. 새 외부 테스트 라이브러리 도입0. backend/Android/펌웨어 소스 무변경으로 기존 Full 결과 재사용, 실패기반 코드수정0/5·같은 원인 반복0. backend 정적/아키텍처 자동 검사는 MISSING 유지.
+- Git codex/single-user-auth-deployment, 기존 미커밋/staged 상태·첨부 보존, 이번 커밋/푸시0. AGENTS117줄. 다음: 사용자가 신규5개 파일만 업로드하고 문서3~6단계 적용/기존 API 확인. 실제 장비는 집에서 LAN/TLS·Wi-Fi·개인 서버용 펌웨어 설정을 확정한 뒤 인수한다.
+
+---
+
+# Docker 수동 배포 전환 — 2026-10-27 (MQTT 추가 전 이력)
+
+- 사용자 승인: 생성한 인증 파일을 유지하고 Dockerfile·backend/PostgreSQL/cloudflared 3개 서비스 Compose·수동 안내를 작성하며 로컬 검증한다. 미니 PC SSH·원격 조작·Cloudflare 실제 연결은 수행하지 않는다.
+- 상태 VERIFIED(로컬 Docker 범위), 실제 미니 PC·Tunnel·공개 HTTPS·폰 인수 NOT RUN. 전체 DONE은 사용자 리뷰 후다. 기존 인증·앱 검증 결과는 아래 이력 그대로 유효하며 이번에는 업무 소스를 변경하지 않았다.
+- docs/PERSONAL_DEPLOYMENT.md를 Windows 준비→WinSCP→Ubuntu→Cloudflare→앱 순서로 다시 작성했다. 이미 만든 auth.env/postgres.env/tunnel.token을 재생성/수정하지 않는다. Compose>=2.30 필요, raw env_file로 BCrypt '$' 보존. 호스트 JDK/cloudflared 설치·포트 공개 없음. 토큰 파일 root:65532/640 권한 안내 포함.
+- infra/personal: Dockerfile(빌드 단계 Java25 JDK/실행 JRE), Healthcheck.java(19줄), .dockerignore, 3개 서비스 compose.yml. 이전 systemd 양식/server.env.example 제거. API backend:8080·DB postgres:5432, backend 비루트·읽기 전용·tmpfs·capability 제거. DB 전용 볼륨·로그 회전·재시작·준비 상태 의존성.
+- scripts/verify-personal-docker.py 최종 exit0/PASS: 새 실행 9개 인수 그룹(3개 서비스/포트 미공개, 이미지/기동/실제 해시 보존, 401/잘못된 비밀번호/로그인, 재배 생성/조회/동일키 재시도, 컨테이너간 DNS 접근, DB/backend 재시작 후 데이터/토큰, 별도 DB 백업 복원, 오프라인 Tunnel 옵션/마운트 읽기, Linux 토큰 권한). 실제 비밀은 읽지 않고 도구가 생성한 격리 시험 계정을 사용했다.
+- 결과 .tools/deployment/ppossak-check-640404a8fcc5/result.json. 앞 4회는 검증 코드 문제로 중단: config 출력의 '$$' 표시, Windows 기본 인코딩, 재시작 임시 포트 재할당, 상세 응답/DB 열 이름 가정. 검증 코드 보완4/5·동일 원인 반복 없음. 실제 앱 조건을 약화하지 않고 마지막 전체 9그룹 통과. 각 시도 격리 자원 정리 exit0; 기존 사용자 컨테이너/볼륨은 변경하지 않았다.
+- 이미지: cloudflared 2026.10.4, digest c6c7ae1d5dfdcb094ad344ed68ccffc26635c9c6be80965664c33baf064b0515; postgres:18 digest 74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336. Java25 JRE/JDK 다이제스트는 작업 명세 참조. 태그는 가변이므로 서버의 실제 이미지도 별도 운영 기록한다.
+- Git codex/single-user-auth-deployment: 기존 미커밋/staged 구분·첨부 유지, 이번 커밋/푸시0. 커밋 초안: feat: add single-owner authentication and Docker deployment. 다음은 사용자가 안내 1~7단계 실행 후 HTTPS/앱 인수 결과 확인이다.
+
+---
+
+# 개인용 인증 구현·수동 배포 인계 — 2026-10-27 (Docker 전환 전 이력)
+
+- 사용자 최신 지시: 미니 PC 배포는 사용자가 직접 수행한다. 에이전트 SSH·원격 조작 중단, 이후 접속/원격 명령0. 별도 사용자 재개 지시 전 원격 접속하지 않는다.
+- 단계1 문서·2 backend 인증·3 Android 연동 VERIFIED. 단계4는 수동 자료 제공 VERIFIED/실제 배포 NOT RUN, 단계5 공개 HTTPS·실제 폰 인수 TODO. 실물 장비·교정·독립 정확도는 계속 보류/NOT VERIFIED다. 상세 tasks/SINGLE_USER_AUTH_DEPLOYMENT.md.
+- Backend 최종 JDK25 build exit0/PASS:216개 새 실행·실패0/오류0/건너뜀0,4분39초·8작업 중6실행/2재사용. Spring Security·단일 계정·토큰 만료/폐기/제한·HTTP 접근 제어·personal 프로필·기존 저장/재배/MQTT 회귀 포함. main 계정/비밀번호 해시 설정 누락 시 HTTP 서버 기동 거절, 비활성 우회 없음.
+- Android JVM15개 새 실행 PASS, debug·미서명 release·테스트 APK PASS. Full134작업 중52실행/82재사용. 마지막 Lint 오류0/경고11·28초·3실행/27재사용. 최종 에뮬레이터9개(Forms8+AppFlow1) 새 실행 PASS·실패0/오류0/건너뜀0, 실제 Keystore·로그인/재배/관리·모의 측정 종단 검증. 상세 화면 전환 대기 보완1/5, 최초 실패8PASS/1FAIL도 보존.
+- Android APK .tools/android-acceptance/auth-1/ppossak-auth-debug.apk. 캡처/결과는 동일 폴더 screens/results, 첫 실패는 attempt-1. 새 APK는 에뮬레이터에 설치했고 현재 실제 폰은 연결되어 있지 않다. 기존 폰 앱의 인증 지원 업데이트/HTTPS 인수는 사용자 배포 후 필요하다.
+- 수동 배포 안내 docs/PERSONAL_DEPLOYMENT.md, 양식 infra/personal, 비밀 파일 숨김 생성 도구 scripts/create-personal-secrets.py. 로컬 도구2개·Compose config 문법·Python 구문·diff --check PASS. Linux systemd/cloudflared 실제 실행 NOT RUN. 비밀번호·Cloudflare 토큰을 수집하지 않았다.
+- 운영 JAR는 backend/home-water-monitor-backend/build/libs/home-water-monitor-backend-0.0.1-SNAPSHOT.jar. personal 프로필 포함·테스트 계정 파일/클래스 제외 확인. SHA256 615B29993F56992FCB913A3D5029E2997082A98B76CA30EF84D067D57384AFF6.
+- 시험 서버 stop/stopped·정상 종료 확인, 이번 ADB reverse만 정리. 에이전트 임시 SSH 개인키 폐기, 서버에 등록한 공개키 한 줄 제거는 사용자 직접 수행 안내. Docker 엔진/다른 서비스/볼륨 보존. 서버·Cloudflare·DNS·공유기 실제 변경 없음.
+- Git: codex/single-user-auth-deployment, 기준fc09362. 변경 unstaged·신규 파일 포함, 미추적 첨부 보존, 커밋·푸시 없음. AGENTS116줄·신규 Java/Kotlin200줄 초과0·기존 마이그레이션/펌웨어 변경0. 사용자 최종 리뷰 전 전체 DONE 아님.
+- 다음: 사용자 수동 배포·서버 구성/HTTPS API/실제 폰 인수 결과 확인. 원격 조작·커밋을 임의로 재개하지 않는다.
+
+---
+
+# 개인용 인증·앱 연동·HTTPS 배포 — 승인 계획 진행
+
+- 사용자 전체 계획 승인: 문서→단일 계정 인증→Android 연동→미니 PC/Tunnel→HTTPS API 인수. 실물 장비 시험은 보류한다. 커밋·푸시는 이번 작업 별도 승인 전 수행하지 않는다.
+- 기준 main fc09362(PR13 병합·최종 CI 성공 확인), 브랜치 codex/single-user-auth-deployment. 미추적 첨부 폴더 보존. 상세 계약·인수·수정 한도는 tasks/SINGLE_USER_AUTH_DEPLOYMENT.md.
+- 제품 목적: 본인 생활의 불편을 개인용 뽀싹 앱·서버로 해결하고 AI 에이전트와의 설계·검증 경험을 실제 근거로 기록한다. 다중 회원·성과 과장·기존 이력 삭제 없음.
+- 단계1 문서 VERIFIED: 목적/승인 경계/인증·앱·배포 계약 반영, diff --check PASS·AGENTS115줄. 단계2 IN_PROGRESS: Spring Security Bearer·단일 계정/BCrypt·프로세스 토큰·로그인 제한/폐기 구현, compileJava/compileTestJava PASS. 인증 관련 시험 실행 중이며 통과 여부 미확정. 단계3~5 TODO.
+- Ubuntu24.04 LTS 추정·Intel N150·Docker·PuTTY SSH 가능·ppossak-api.jucadrive.com은 사용자 정보이며 실제 서버 접근/환경은 아직 확인하지 않았다. 기존 운영 서비스/포트/DB를 변경하지 않는다.
+- 현재 Docker 엔진이 꺼져 있어 테스트용 Docker Desktop 기동 명령 승인을 받아 시작했다. 테스트는 격리된 Testcontainers만 사용한다. 실제 서버·Cloudflare·장비는 조작하지 않았다.
+- 구현 중인 코드의 테스트를 PASS로 간주하지 않는다. 기존 Android9개/backend204개는 새 인증의 검증 근거가 아니다.
+- 2026-10-27 단계2 VERIFIED: JDK25 Full215개 새 실행·실패0/오류0/건너뜀0·exit0. 신규 인증11개 포함,4분35초·8작업 중6실행/2재사용. 설정 미비/실제 HTTP/토큰 만료·폐기/기존 저장·MQTT 회귀 확인, 자동수정0/5. 단계3 앱 연동으로 진행한다.
+
+---
+
 # 뽀싹 Git 통합 승인 — 2026-10-26
 
 - 사용자가 UI 결과를 승인하고 스테이징·커밋·푸시·PR 생성·main 병합까지 명시 지시했다. 뽀싹 이름·아이콘·설치 통합은 DONE, Git 통합은 이 승인에 따라 진행한다. 아래 커밋·푸시 미실행 문구는 당시 이력이다.

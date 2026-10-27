@@ -1,5 +1,9 @@
 #include <stdio.h>
 #include <string.h>
+#include "sdkconfig.h"
+#if defined(HWM_PERSONAL_CONFIG) && !defined(CONFIG_MBEDTLS_HAVE_TIME_DATE)
+#error "Personal TLS requires certificate validity time verification"
+#endif
 #include "session.h"
 #include "control.h"
 #include "command_control.h"
@@ -7,10 +11,15 @@
 #include "ads1115.h"
 #include "tds_sensor.h"
 #include "worker.h"
-#if !defined(HWM_CREDENTIAL_FREE) && __has_include("local_config.h")
+#if defined(HWM_PERSONAL_CONFIG) && !defined(HWM_CREDENTIAL_FREE)
+#include "local_personal_config.h"
+#elif !defined(HWM_CREDENTIAL_FREE) && __has_include("local_config.h")
 #include "local_config.h"
 #else
 #include "local_config.example.h"
+#endif
+#ifndef HWM_MQTT_CA_PEM
+#define HWM_MQTT_CA_PEM ""
 #endif
 #include "driver/uart.h"
 #include "esp_log.h"
@@ -199,7 +208,7 @@ void app_main(void)
     }
     hwm_transport_config config = {.ssid = HWM_WIFI_SSID, .wifi_password = HWM_WIFI_PASSWORD,
         .broker_uri = HWM_BROKER_URI, .device_id = HWM_DEVICE_ID, .username = HWM_MQTT_USERNAME,
-        .password = HWM_MQTT_PASSWORD, .open_wifi = HWM_WIFI_OPEN};
+        .password = HWM_MQTT_PASSWORD, .open_wifi = HWM_WIFI_OPEN, .ca_pem = HWM_MQTT_CA_PEM};
     uart_config_t uart = {.baud_rate = 115200, .data_bits = UART_DATA_8_BITS, .parity = UART_PARITY_DISABLE,
         .stop_bits = UART_STOP_BITS_1, .flow_ctrl = UART_HW_FLOWCTRL_DISABLE, .source_clk = UART_SCLK_DEFAULT};
     if (!hwm_init(&session, HWM_DEVICE_ID) || uart_param_config(UART_NUM_0, &uart) != ESP_OK

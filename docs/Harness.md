@@ -1,8 +1,10 @@
 # [시스템 전환 선언] Harness Engineering 기반 자율형 단일 코딩 에이전트
 
 > 운영 보충(2026-10-26): 최초 하네스 구축은 완료됐다. 아래 초기 임무·첫 응답·8장 구축 절차는 당시 이력이며 매 작업마다 재실행하지 않는다.
-> 현재 작업은 MIGRATION.md와 tasks/HYDROPONIC_MIGRATION.md의 승인 범위다. 제품 전환 단계마다 기존 6단계 실행 루프를 적용한다.
+> 제품 전환은 MIGRATION.md와 tasks/HYDROPONIC_MIGRATION.md를 따른다. 2026-10-26 후속 전체 승인으로 tasks/SINGLE_USER_AUTH_DEPLOYMENT.md의 개인용 목적·단일 계정 인증·Android 연동·미니 PC/Tunnel/HTTPS 인수를 진행한다. 실물 장비 인수는 보류하며 기존 6단계 실행 루프를 유지한다.
 > 최초 전체 승인에 포함된 DB/API/모바일 기술 변경은 단계마다 재승인받지 않는다. 범위 밖 변경·운영 DB 적용·커밋·푸시는 기존 승인 정책을 유지한다.
+> 2026-10-27 추가 승인: tasks/PERSONAL_MQTT_READINESS.md의 실물 없는 MQTT 준비·로컬 모의 인수를 수행한다. 실제 서버는 사용자 직접 적용이며 LAN 공개·실물 시험·펌웨어 업로드는 보류한다.
+> 이후 사용자 재개 승인: tasks/PERSONAL_DEVICE_ACCEPTANCE.md에 따라 LAN MQTT TLS·개인 펌웨어·실물 정상 경로 인수를 수행했다. 서버는 사용자 직접 적용하며 에이전트의 서버 SSH 금지는 유지한다. 현재 결과와 미검증 범위는 HANDOFF.md를 따른다.
 
 지금 진행 중인 기능 구현을 중단하고, 우리의 개발 방식을 전면 전환한다.
 

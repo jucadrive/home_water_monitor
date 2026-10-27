@@ -3,11 +3,12 @@
 2026-10-26 사용자 승인. 전환 배경은 ../MIGRATION.md, 실행·검증 상태는 tasks/HYDROPONIC_MIGRATION.md와 HANDOFF.md를 따른다.
 
 ## 목적·경계
+- 뽀싹은 본인의 생활 불편을 해결하는 단일 사용자 Android·개인 서버 앱이다. AI 에이전트와의 설계·검증 경험을 증거로 설명하며 공개 회원 서비스·오프라인 전용 앱은 목표가 아니다.
 - 하나의 재배 활동은 독립적으로 관리하는 영양액 용기 하나의 재배 기간이다. 식물명은 문자열이다.
 - Kotlin·Jetpack Compose 안드로이드 앱에서 재배·관리·TDS 추세를 조회한다. 웹사이트는 만들지 않는다.
 - TDS는 영양소별 농도·식물 건강·안전성·정확한 교체 시점을 확정하지 않는다.
 - SEN0244 0~1000ppm, 미교정·25°C 가정은 현재 제약이다. 교정·독립 정확도·실수온·안정화 충분성은 NOT VERIFIED.
-- 자동 투입·임계값·알림·식물 마스터·다중 공유 탱크·신규 센서·운영 배포는 범위 밖이다.
+- 자동 투입·임계값·알림·식물 마스터·다중 공유 탱크·신규 센서·다중 회원은 범위 밖이다. 개인 서버의 인증·배포는 후속 승인된 tasks/SINGLE_USER_AUTH_DEPLOYMENT.md를 따른다.
 
 ## 재배·관리 규칙
 - Cultivation: UUID, plantName(1~100자), name(1~100자), startedAt, endedAt, ACTIVE/ENDED, memo(최대2000자), createdAt/updatedAt.

@@ -13,6 +13,9 @@ spring:
 
 # 재수신 및 통합 라우팅 트랜잭션의 잠금 대기를 제한하며 DB 전역 설정은 변경하지 않는다.
 water-monitor:
+  auth:
+    username: ${PPOSSAK_AUTH_USERNAME:}
+    password-hash: ${PPOSSAK_AUTH_PASSWORD_HASH:}
   control:
     enabled: ${MQTT_CONTROL_ENABLED:false}
     status-client-id: ${MQTT_STATUS_CLIENT_ID:}

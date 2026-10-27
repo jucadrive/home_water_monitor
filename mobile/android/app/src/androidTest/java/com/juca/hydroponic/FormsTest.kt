@@ -69,6 +69,35 @@ class FormsTest {
         compose.onNodeWithText("닫기").performClick()
         compose.onNodeWithText("고운돋움 · 감자꽃").assertDoesNotExist()
     }
+    @Test fun ownerPasswordIsClearedAfterEachLoginSubmission() {
+        val submitted = mutableListOf<String>()
+        compose.setContent { GardenTheme { OwnerLogin(false) { _, password -> submitted += password } } }
+        compose.onNodeWithText("계정 이름").performTextInput("owner")
+        compose.onNodeWithText("비밀번호").performTextInput("fixture-only")
+        compose.onNodeWithText("로그인", substring = false).performClick()
+        compose.onNodeWithText("비밀번호").performTextInput("second")
+        compose.onNodeWithText("로그인", substring = false).performClick()
+        compose.runOnIdle { assertEquals(listOf("fixture-only", "second"), submitted) }
+    }
+    @Test fun realKeystoreProtectsTokenAndRecoversFromCorruptCiphertext() {
+        val context = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext
+        val prefs = context.getSharedPreferences("owner_auth", android.content.Context.MODE_PRIVATE)
+        val before = prefs.all.toMap()
+        try {
+            val vault = OwnerSessionVault(context)
+            val session = OwnerSession("https://fixture.invalid", "a".repeat(43), java.time.Instant.now().plusSeconds(60).toString())
+            vault.save(session)
+            assertFalse(prefs.getString("sealed", "")!!.contains(session.accessToken))
+            assertEquals(session, vault.read(session.origin))
+            assertNull(vault.read("https://other.invalid"))
+            check(prefs.edit().putString("sealed", "corrupt").commit())
+            assertNull(vault.read(session.origin))
+        } finally {
+            val editor = prefs.edit().clear()
+            before.forEach { (key, value) -> check(value is String); editor.putString(key, value) }
+            check(editor.commit())
+        }
+    }
     private fun summary(result: String, source: String, median: BigDecimal?) = SessionSummary("s-$source", "d", null,
         "2026-10-26T00:00:00Z", "REQUESTED", result, if (result == "NORMAL") 60 else 0,
         if (result == "NORMAL") 50 else 0, median, BigDecimal("25"), "test-version", source)

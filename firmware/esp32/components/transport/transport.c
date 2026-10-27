@@ -4,6 +4,7 @@
 #include "mqtt5_client.h"
 #include "esp_event.h"
 #include "esp_netif.h"
+#include "esp_netif_sntp.h"
 #include "esp_random.h"
 #include "esp_wifi.h"
 #include "nvs_flash.h"
@@ -33,6 +34,15 @@ static uint64_t wifi_deadline, wifi_next, rx_deadline, rx_next;
 static unsigned wifi_backoff = 1000, rx_backoff = 1000;
 static int subscription_id;
 static unsigned wifi_reason;
+static bool tls_required, time_started, time_reported;
+static atomic_bool time_ready;
+static uint64_t time_notice;
+
+static void time_synchronized(struct timeval *tv)
+{
+    (void)tv;
+    atomic_store(&time_ready, true);
+}
 
 static void post(const hwm_net_event *event)
 {
@@ -130,6 +140,7 @@ static esp_mqtt_client_handle_t create_client(bool receiver, callback_context *c
 {
     esp_mqtt_client_config_t options = {
         .broker.address.uri = cfg.broker_uri,
+        .broker.verification.certificate = tls_required ? cfg.ca_pem : NULL,
         .credentials.client_id = receiver ? rx_id : tx_id,
         .credentials.username = cfg.username,
         .credentials.authentication.password = cfg.password,
@@ -173,10 +184,22 @@ static void reset_rx(uint64_t now)
 
 bool hwm_transport_init(const hwm_transport_config *config)
 {
+    if (!config || !config->broker_uri) return false;
     cfg = *config;
+    tls_required = !strncmp(cfg.broker_uri, "mqtts://", 8);
+    if ((!tls_required && strncmp(cfg.broker_uri, "mqtt://", 7))
+        || (tls_required && (!cfg.ca_pem || !*cfg.ca_pem || cfg.open_wifi))
+        || (!tls_required && cfg.ca_pem && *cfg.ca_pem)) return false;
     queue = xQueueCreate(24, sizeof(hwm_net_event));
     if (!queue || nvs_flash_init() != ESP_OK || esp_netif_init() != ESP_OK || esp_event_loop_create_default() != ESP_OK) return false;
     if (!esp_netif_create_default_wifi_sta()) return false;
+    if (tls_required) {
+        esp_sntp_config_t time_config = ESP_NETIF_SNTP_DEFAULT_CONFIG("pool.ntp.org");
+        time_config.start = false;
+        time_config.sync_cb = time_synchronized;
+        if (esp_netif_sntp_init(&time_config) != ESP_OK) return false;
+        printf("HWM_TLS_REQUIRED enabled=1\n");
+    }
     wifi_init_config_t init = WIFI_INIT_CONFIG_DEFAULT();
     if (esp_wifi_init(&init) != ESP_OK || esp_wifi_set_storage(WIFI_STORAGE_RAM) != ESP_OK) return false;
     if (esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, wifi_event, NULL) != ESP_OK
@@ -213,6 +236,20 @@ void hwm_transport_poll(uint64_t now)
             if (!wifi_pending) wifi_next = now + wifi_backoff;
         }
         return;
+    }
+    /* No blocking wait: UART/controller continue while TLS needs a valid clock.
+       Never fall back to plaintext or skip certificate/hostname/time verification. */
+    if (tls_required && !atomic_load(&time_ready)) {
+        if (!time_started) time_started = esp_netif_sntp_start() == ESP_OK;
+        if (now >= time_notice) {
+            printf("HWM_TIME_WAIT synchronized=0\n");
+            time_notice = now + 10000;
+        }
+        return;
+    }
+    if (tls_required && !time_reported) {
+        printf("HWM_TIME_READY synchronized=1\n");
+        time_reported = true;
     }
     if (rx && !receiver_ready && now >= rx_deadline) reset_rx(now);
     if (!rx && now >= rx_next) {

@@ -35,13 +35,13 @@ class MutationRunnerTest {
         assertEquals("body", storage.pending!!.body)
     }
     @Test fun definiteRejectionClearsPendingButUnavailableRemainsRetryable() = runTest {
-        for (status in listOf(400, 404, 409, 408, 429, 503)) {
+        for (status in listOf(400, 401, 403, 404, 409, 408, 429, 503)) {
             val storage = Memory()
             val runner = MutationRunner(storage) { object : Remote {
                 override suspend fun request(method: String, path: String, body: String?, key: String?): String = throw ApiException(status, "TEST")
             } }
             try { runner.execute("https://example.com", "/api/cultivations", "body", "CREATE", null); fail() } catch (_: ApiException) { }
-            assertEquals(status in listOf(408, 429, 503), storage.pending != null)
+            assertEquals(status in listOf(401, 403, 408, 429, 503), storage.pending != null)
         }
     }
     @Test fun storageFailurePreventsNetworkSubmission() = runTest {

@@ -13,7 +13,7 @@ class MonitorApiTest {
         val paths = java.util.concurrent.CopyOnWriteArrayList<String>()
         val body = "{\"plantName\":\"바질\"}"
         val served = worker.submit {
-            repeat(3) {
+            repeat(4) {
                 server.accept().use { socket ->
                     socket.soTimeout = 5000
                     val input = java.io.DataInputStream(socket.getInputStream().buffered())
@@ -39,10 +39,12 @@ class MonitorApiTest {
                     val (status, response) = when (request[1]) {
                         "/api/create" -> {
                             assertEquals("POST", request[0]); assertEquals("same-key", headers["idempotency-key"])
+                            assertEquals("Bearer " + "a".repeat(43), headers["authorization"])
                             assertEquals(body, data.toString(Charsets.UTF_8)); 201 to body
                         }
                         "/api/conflict" -> 409 to "{\"code\":\"IDEMPOTENCY_CONFLICT\"}"
                         "/api/redirect" -> 302 to ""
+                        "/api/auth/login" -> { assertNull(headers["authorization"]); 200 to "{}" }
                         else -> error("Redirect must not be followed")
                     }
                     val bytes = response.toByteArray(Charsets.UTF_8)
@@ -52,10 +54,11 @@ class MonitorApiTest {
             }
         }
         try {
-            val api = MonitorApi("http://127.0.0.1:${server.localPort}", true)
+            val api = MonitorApi("http://127.0.0.1:${server.localPort}", true, "a".repeat(43))
             assertEquals("바질", JSONObject(api.request("POST", "/api/create", body, "same-key")).getString("plantName"))
             try { api.request("GET", "/api/conflict"); fail() } catch (e: ApiException) { assertEquals(409, e.status); assertEquals("IDEMPOTENCY_CONFLICT", e.code) }
             try { api.request("GET", "/api/redirect"); fail() } catch (e: ApiException) { assertEquals(302, e.status) }
+            api.request("POST", "/api/auth/login", "{}")
             served.get(5, java.util.concurrent.TimeUnit.SECONDS)
             assertFalse(paths.contains("/api/never"))
         } finally { server.close(); worker.shutdownNow() }
