@@ -1,3 +1,30 @@
+# Android UI 사용자 검수·Git 통합 승인 — 2026-10-28
+
+- 사용자가 수정 APK 확인 후 만족 의사를 표시하고 현재 UI 변경의 커밋·푸시·PR·main 병합을 명시 승인했다. UI 작업 DONE. 승인 범위는 소스·테스트·검증 스크립트·문서이며 실제 비밀 설정·APK·로컬 캡처/검증 산출물은 제외한다.
+- 브랜치 codex/android-ui-simplification, 기준 main685325b와 원격 main 일치 확인. 커밋 메시지 `feat: simplify owner login and measurement UI`. 이미 통과한 Android Full/JVM17·UI13·격리 종단14와 사용자 APK 검수를 재사용하고 푸시 SHA/PR/main의 backend Full CI를 별도로 확인한다. 현재 원격 CI는 Android 검증을 실행하지 않는다.
+- 최종 커밋·PR·병합 SHA와 원격 CI 결과는 Git/PR/Actions 이력이 기준이다. 서버 원격 조작·재배포·강제 Git 작업·브랜치 삭제는 포함하지 않는다.
+
+---
+
+# Android UI 종단 재검증 — 2026-10-28
+
+- 사용자 Docker 재시작 후 실행 지시. Docker29.8.1·JDK25 전용 backend/임시 PostgreSQL18·MQTT와 API35 emulator-5554/JDK21 Android로 새 실행했다. 운영 서버·DB·실물 접근 없음.
+- EndToEnd Forms13+AppFlow1=14개 새 실행 PASS, 실패0/오류0/건너뜀0·exit0·1분33초. 로그인/장치 설정/재배 생성/전체 교체/모의 START/60원본·50통계/NORMAL·버퍼 해제/출처 구분/재배 종료/불완전 과거 조회 인수 PASS. 이전 Docker/JDK 차단 해소, UI·격리 종단 VERIFIED.
+- `.tools/android-acceptance/ui-e2e-20261028-1`에 결과 XML/로그·캡처10장 보존. 메인/정상 결과 시각 검수 PASS. stop→stopped=closed/서버exit0·이번 시험 DB/MQTT 컨테이너 제거·이번 adb reverse 해제 확인. 속성 없는 assembleDebug exit0으로 고정 HTTPS 기본 빌드 복원. 배포용 기존 `.tools/ui-20261028/ppossak-ui-debug.apk` 유지.
+- 상세 [tasks/ANDROID_UI_SIMPLIFICATION.md](tasks/ANDROID_UI_SIMPLIFICATION.md). 코드 수정 없음·커밋/푸시 없음·작업 브랜치/기존 unstaged 보존. 실제 폰/운영HTTPS/실물 재검증은 이번 범위 밖이며 전체 DONE은 사용자 리뷰 후다.
+
+---
+
+# Android 돌봄 UI 간소화 — 2026-10-28
+
+- 사용자 전체 계획 승인 후 로그인→메인→측정 결과를 순차 수정했다. 명세 [tasks/ANDROID_UI_SIMPLIFICATION.md](tasks/ANDROID_UI_SIMPLIFICATION.md). 서버 주소는 번들 HTTPS로 고정, 장치 설정은 인증 후 제공하며 기존 미확정 요청의 원래 origin·키·본문은 보존한다. debug loopback 인수만 빌드 속성으로 주입하며 release 고정 HTTPS/인증서 검증은 유지한다.
+- 상단바/공통 소개의 식물 장식 제거·기본 브랜드 `뽀싹 돌봄 일지`, 로그인 라이선스 버튼/HTTP 안내 제거(라이선스 자산 유지). 결과는 대표값/출처/시각근거/보존/측정한계 요약과 펼침 상세로 분리했다. 원본 영역/안정화 제외는 유지했다.
+- Android Full exit0: JVM17개 새 실행·실패0/오류0/건너뜀0, debug/미서명 release PASS, Lint0오류/11경고. API35 emulator-5554에서 FormsTest12개 + 후속 메인 테스트1개 새 실행 PASS(각 exit0, 실패/오류/건너뜀0). 로그인·결과·320dp/1.6배 글꼴·메인 캡처5장 검수 PASS. 최초 Gradle URI 이름 충돌1회 수정 후 성공.
+- UI 인수 VERIFIED, 전체 DONE은 사용자 리뷰 후. EndToEnd NOT VERIFIED: Docker Linux 엔진 pipe 부재; 별도 서버 시도는 JDK21 지정으로25 toolchain 탐색 실패. 시험 DB/브로커는 생성되지 않았다. Docker 엔진+JDK25 준비 후 별도 재검증 가능하다. 실제 폰 설치/공개HTTPS 변경 후 검증은 NOT RUN이다.
+- 결과 APK `.tools/ui-20261028/ppossak-ui-debug.apk`, 캡처 `.tools/ui-20261028/screens/`, 상세 명세에 해시와 명령 기록. 신규 Java/Kotlin200줄 초과 없음·diff 검사 PASS·backend/펌웨어 변경 없음·서버 원격 조작 없음. 브랜치 codex/android-ui-simplification, 변경 unstaged·커밋/푸시 없음. 커밋 초안 `feat: simplify owner login and measurement UI`.
+
+---
+
 # 인증·배포·장비·문서 Git 통합 — 2026-10-27
 
 - 사용자 명시 승인: 지금까지의 코드/문서/배포 양식을 비밀·개인 설정·위험 산출물을 제외하고 stage/commit/push/PR/main 병합까지 수행한다. 기존 codex/single-user-auth-deployment를 사용하며 force push·브랜치 삭제·서버 배포는 포함하지 않는다.

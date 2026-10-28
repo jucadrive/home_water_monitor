@@ -4,7 +4,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
@@ -25,18 +26,51 @@ import com.juca.hydroponic.data.SessionDetail
 @Composable fun SessionScreen(data: SessionDetail?) {
     if (data == null) return
     val s = data.session
+    var expanded by rememberSaveable(s.sessionId) { mutableStateOf(false) }
     LazyColumn(Modifier.fillMaxSize().testTag("session-list"), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item {
-            GardenIntro("측정 결과", "영양액의 작은 변화를 기록했어요.", "측정 노트")
-            GardenBadge(if (s.preservationResult == "NORMAL") "정상 보존" else "불완전 보존 · 통계 제외", warm = s.preservationResult != "NORMAL")
-            Text(ppm(s.medianTdsPpm), style = if (s.medianTdsPpm == null) MaterialTheme.typography.headlineMedium else NumberStyle)
-            if (s.preservationResult == "NORMAL") Text("최소 ${ppm(s.minTdsPpm)} · 평균 ${ppm(s.avgTdsPpm)} · 최대 ${ppm(s.maxTdsPpm)}")
-            Text("${date(s.displayAt)} · ${basis(s.timeBasis)}")
-            Text("${s.deviceId} · ${s.source}")
-            Text("원본 ${s.preservedSampleCount}/60 · 통계 ${s.statsSampleCount}개")
-            Text("가정 수온 ${s.temperatureAssumedC?.toPlainString()}°C · 실측 수온 아님")
-            Text("교정 정보 ${s.calibrationVersion}", style = MaterialTheme.typography.bodySmall)
-            Text("세션 ${s.sessionId}", style = MaterialTheme.typography.bodySmall)
+            GardenIntro("측정 결과", "돌봄에 참고할 변화를 살펴보세요.", "측정 노트")
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    GardenBadge(if (s.preservationResult == "NORMAL") "정상 보존" else "불완전 보존 · 통계 제외", warm = s.preservationResult != "NORMAL")
+                    Text("TDS 중앙값", style = MaterialTheme.typography.labelLarge, color = Muted)
+                    Text(ppm(s.medianTdsPpm), style = if (s.medianTdsPpm == null) MaterialTheme.typography.headlineMedium else NumberStyle)
+                    Text(date(s.displayAt), style = MaterialTheme.typography.bodyMedium)
+                    Text(basis(s.timeBasis), style = MaterialTheme.typography.bodySmall, color = Muted)
+                    HorizontalDivider()
+                    Text(when (s.source) {
+                        "ADS1115" -> "센서 실측 · ADS1115"
+                        "SIMULATED" -> "가상 측정 · 실측 아님"
+                        else -> "측정 출처: ${s.source}"
+                    }, style = MaterialTheme.typography.labelLarge)
+                    Text("원본 ${s.preservedSampleCount}/60 · 통계 ${s.statsSampleCount}개", style = MaterialTheme.typography.bodySmall)
+                    Text(if (s.calibrationVersion == "sen0244-uncalibrated-v1") "미교정 측정" else "교정 정보는 상세 정보에서 확인하세요.",
+                        style = MaterialTheme.typography.bodySmall, color = Muted)
+                    Text(s.temperatureAssumedC?.let { "${it.stripTrailingZeros().toPlainString()}°C 가정 · 실측 수온 아님" } ?: "가정 수온 기록 없음 · 실측 수온 아님",
+                        style = MaterialTheme.typography.bodySmall, color = Muted)
+                }
+            }
+        }
+        item {
+            OutlinedButton(onClick = { expanded = !expanded }, modifier = Modifier.fillMaxWidth()) {
+                Text(if (expanded) "상세 정보 접기" else "상세 정보 보기")
+            }
+        }
+        if (expanded) item {
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    if (s.preservationResult == "NORMAL") {
+                        SessionFact("최소", ppm(s.minTdsPpm))
+                        SessionFact("평균", ppm(s.avgTdsPpm))
+                        SessionFact("최대", ppm(s.maxTdsPpm))
+                    }
+                    SessionFact("측정 장치", s.deviceId)
+                    SessionFact("교정 버전", s.calibrationVersion)
+                    SessionFact("세션 ID", s.sessionId)
+                }
+            }
+        }
+        item {
             Spacer(Modifier.height(16.dp))
             Text("보존 원본", style = MaterialTheme.typography.titleLarge)
             Text("안정화 원본도 보존하며 정상 통계에서는 제외합니다.", style = MaterialTheme.typography.bodySmall)
@@ -75,6 +109,15 @@ import com.juca.hydroponic.data.SessionDetail
             Button(onClick = { vm.session(c.sessionId) }, enabled = !s.busy && c.serverPreservation in listOf("NORMAL", "INCOMPLETE"), modifier = Modifier.fillMaxWidth()) { Text("보존 결과 보기") }
             OutlinedButton(onClick = vm::retryResult, enabled = !s.busy && s.pending == null && c.deviceBuffer == "HELD" && c.deviceState == "MANUAL_WAIT",
                 modifier = Modifier.fillMaxWidth()) { Text("보관 중인 결과 다시 전송") }
+        }
+    }
+}
+
+@Composable private fun SessionFact(label: String, value: String) {
+    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        Text(label, color = Muted, style = MaterialTheme.typography.labelMedium)
+        androidx.compose.foundation.text.selection.SelectionContainer {
+            Text(value, style = MaterialTheme.typography.bodyMedium)
         }
     }
 }

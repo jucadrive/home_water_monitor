@@ -57,15 +57,11 @@ import androidx.compose.ui.unit.dp
     }
 }
 
-@Composable fun GardenIntro(title: String, subtitle: String, eyebrow: String = "뽀싹 · 영양액 일지") {
-    Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(eyebrow, color = Muted, style = MaterialTheme.typography.labelMedium)
-            Text(title, style = MaterialTheme.typography.headlineLarge)
-            Text(subtitle, color = Muted, style = MaterialTheme.typography.bodyMedium)
-        }
-        Sprout(Modifier.size(86.dp))
+@Composable fun GardenIntro(title: String, subtitle: String, eyebrow: String = "뽀싹 돌봄 일지") {
+    Column(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(eyebrow, color = Muted, style = MaterialTheme.typography.labelMedium)
+        Text(title, style = MaterialTheme.typography.headlineLarge)
+        Text(subtitle, color = Muted, style = MaterialTheme.typography.bodyMedium)
     }
 }
 

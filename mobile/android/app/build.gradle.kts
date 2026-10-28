@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.net.URI
 
 plugins {
     id("com.android.application")
@@ -16,6 +17,19 @@ android {
         versionCode = 1
         versionName = "0.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+    buildTypes {
+        getByName("release") { buildConfigField("String", "API_ORIGIN", "\"https://ppossak-api.jucadrive.com\"") }
+        getByName("debug") {
+            // Only isolated loopback acceptance can override the production origin at build time.
+            val testOrigin = providers.gradleProperty("acceptanceOrigin").orNull
+            if (testOrigin != null) {
+                val uri = URI(testOrigin)
+                require(uri.scheme == "http" && uri.host == "127.0.0.1" && uri.port in 1..65535 &&
+                    uri.rawPath.isNullOrEmpty() && uri.userInfo == null && uri.rawQuery == null && uri.rawFragment == null)
+            }
+            buildConfigField("String", "API_ORIGIN", "\"${testOrigin ?: "https://ppossak-api.jucadrive.com"}\"")
+        }
     }
     buildFeatures { compose = true; buildConfig = true }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
