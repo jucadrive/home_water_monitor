@@ -28,12 +28,10 @@ import kotlinx.coroutines.delay
             lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) { while (true) { delay(3000); vm.refreshCommand() } }
         }
     }
-    BackHandler(state.busy || state.screen != Screen.LIST && (state.screen != Screen.SETTINGS || state.origin.isNotBlank())) { vm.back() }
+    BackHandler(state.busy || state.authenticated && state.screen != Screen.LIST) { vm.back() }
     GardenTheme {
         Scaffold(topBar = {
-            TopAppBar(title = { Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                Sprout(Modifier.size(36.dp)); Spacer(Modifier.width(8.dp)); Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleLarge)
-            } }, navigationIcon = {
+            TopAppBar(title = { Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleLarge) }, navigationIcon = {
                 if (state.authenticated && state.screen != Screen.LIST) TextButton(onClick = vm::back, enabled = !state.busy) { Text("뒤로") }
             }, actions = { if (state.screen != Screen.SETTINGS) TextButton(onClick = vm::settings, enabled = !state.busy) { Text("설정") } })
         }) { padding ->

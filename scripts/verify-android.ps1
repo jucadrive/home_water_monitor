@@ -36,7 +36,7 @@ try {
                 throw 'The acceptance server must use explicit HTTP loopback without credentials.'
             }
             @('connectedDebugAndroidTest', '-Pandroid.testInstrumentationRunnerArguments.class=com.juca.hydroponic.FormsTest,com.juca.hydroponic.AppFlowTest',
-                "-Pandroid.testInstrumentationRunnerArguments.serverOrigin=$ServerOrigin",
+                "-PacceptanceOrigin=$ServerOrigin", "-Pandroid.testInstrumentationRunnerArguments.serverOrigin=$ServerOrigin",
                 "-Pandroid.testInstrumentationRunnerArguments.deviceId=$MqttDeviceId")
         }
     }

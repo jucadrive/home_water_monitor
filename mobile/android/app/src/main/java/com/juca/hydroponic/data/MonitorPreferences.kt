@@ -1,13 +1,14 @@
 package com.juca.hydroponic.data
 
 import android.content.Context
+import com.juca.hydroponic.BuildConfig
 import org.json.JSONObject
 import java.io.IOException
 
 class MonitorPreferences(context: Context) : MutationStorage {
     private val prefs = context.getSharedPreferences("monitor", Context.MODE_PRIVATE)
     var origin: String
-        get() = prefs.getString("origin", "").orEmpty()
+        get() = ServerSelection.origin(BuildConfig.API_ORIGIN, pending?.origin)
         set(value) { check(prefs.edit().putString("origin", value).commit()) }
     var device: String
         get() = prefs.getString("device", "").orEmpty()

@@ -1,7 +1,8 @@
 # Android 연결 정책·개발 검증
 
 ## 기본 정책
-앱은 서버 origin을 사용자가 지정하며 기본 URL·장치 ID를 하드코딩하지 않는다. 릴리즈는 HTTPS만 허용하고 인증서 검증을 우회하지 않는다.
+2026-10-28 UI 간소화 승인에 따라 일반 앱은 `https://ppossak-api.jucadrive.com`을 사용하며 서버 주소 입력을 제공하지 않는다. 장치 ID는 로그인 후 설정한다. 릴리즈는 HTTPS만 허용하고 인증서 검증을 우회하지 않는다.
+이전 버전의 미확정 요청이 있으면 원래 origin을 유지한다. 요청의 키·본문을 지우거나 새 서버로 전송하지 않는다. debug 인수 빌드만 `-PacceptanceOrigin=http://127.0.0.1:<port>`로 격리 서버를 선택할 수 있으며 release 주소는 변하지 않는다.
 현재 백엔드의 개발 HTTP와 연결하려면 디버그 한정 예외 또는 사용자가 준비한 HTTPS 서버가 필요하다. 2026-10-26 후속 승인에 따라 단일 사용자 인증과 ppossak-api.jucadrive.com의 Cloudflare Tunnel 배포를 진행한다. 실제 완료 여부는 tasks/SINGLE_USER_AUTH_DEPLOYMENT.md와 HANDOFF.md를 따른다. 인증서 검증 완화·다른 서비스 공개 변경은 승인 범위 밖이다.
 
 앱 토큰은 서버 origin에 귀속하고 Keystore 키로 암호화해 보관한다. 비밀번호를 영속 저장하지 않는다. 만료·로그아웃 뒤에도 미확정 요청은 보존하고 재로그인 후 동일 요청을 명시적으로 재시도한다. Cloudflare 서비스 토큰·터널 자격증명을 APK에 포함하지 않는다.

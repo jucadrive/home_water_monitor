@@ -5,6 +5,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.width
 import androidx.compose.ui.test.*
@@ -61,13 +62,86 @@ class FormsTest {
         compose.onNodeWithText("재배 등록").performScrollTo().performClick()
         compose.runOnIdle { assertTrue(submitted) }
     }
-    @Test fun bundledFontLicensesAreReadableFromSettings() {
+    @Test fun loginHidesServerDeviceAndDevelopmentControls() {
         compose.setContent { GardenTheme { SettingsScreen(MonitorState(), { _, _ -> }, {}) } }
-        compose.onNodeWithText("사용한 글꼴과 라이선스").performScrollTo().performClick()
-        compose.onNodeWithText("고운돋움 · 감자꽃").assertIsDisplayed()
-        compose.onNodeWithText("SIL OPEN FONT LICENSE", substring = true).assertExists()
-        compose.onNodeWithText("닫기").performClick()
-        compose.onNodeWithText("고운돋움 · 감자꽃").assertDoesNotExist()
+        compose.onNodeWithText("서버 주소").assertDoesNotExist()
+        compose.onNodeWithText("장치 ID · 측정할 때 필요").assertDoesNotExist()
+        compose.onNodeWithText("사용한 글꼴과 라이선스").assertDoesNotExist()
+        compose.onNodeWithText("개발 빌드:", substring = true).assertDoesNotExist()
+        compose.onNodeWithText("계정 이름").assertIsDisplayed()
+        compose.onNodeWithText("비밀번호").assertIsDisplayed()
+        snapshot("login")
+    }
+    @Test fun deviceSettingsRemainAvailableAfterLogin() {
+        var saved = ""
+        compose.setContent { GardenTheme { SettingsScreen(MonitorState(authenticated = true, origin = "https://fixture.invalid"),
+            { origin, device -> saved = "$origin/$device" }, {}) } }
+        compose.onNodeWithText("장치 ID · 측정할 때 필요").performTextInput("esp32-bench")
+        compose.onNodeWithText("장치 설정 저장").performScrollTo().performClick()
+        compose.runOnIdle { assertEquals("https://fixture.invalid/esp32-bench", saved) }
+    }
+    @Test fun narrowLargeFontResultKeepsProvenanceAndExpandsIdentifiers() {
+        val session = summary("NORMAL", "SIMULATED", BigDecimal("120"))
+        compose.setContent {
+            val density = LocalDensity.current.density
+            CompositionLocalProvider(LocalDensity provides Density(density, 1.6f)) {
+                GardenTheme { Box(Modifier.width(320.dp)) { SessionScreen(SessionDetail(session, emptyList())) } }
+            }
+        }
+        compose.onNodeWithText("120 ppm").assertExists()
+        compose.onNodeWithText("가상 측정 · 실측 아님").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("25°C 가정 · 실측 수온 아님").performScrollTo().assertIsDisplayed()
+        snapshot("result-large")
+        compose.onNodeWithText("세션 ID").assertDoesNotExist()
+        compose.onNodeWithText("상세 정보 보기").performScrollTo().performClick()
+        compose.onNodeWithText("교정 버전").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("s-SIMULATED").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("상세 정보 접기").performScrollTo().performClick()
+        compose.onNodeWithText("세션 ID").assertDoesNotExist()
+        compose.onNodeWithText("보존 원본").performScrollTo().assertIsDisplayed()
+    }
+    @Test fun measuredResultRetainsUncalibratedWarningAndRawSamples() {
+        val session = summary("NORMAL", "ADS1115", BigDecimal("120")).copy(calibrationVersion = "sen0244-uncalibrated-v1")
+        compose.setContent { GardenTheme { SessionScreen(SessionDetail(session,
+            listOf(Sample(1, 1000, BigDecimal("121"), true, BigDecimal("300"))))) } }
+        compose.onNodeWithText("미교정 측정").assertExists()
+        snapshot("result")
+        compose.onNodeWithText("센서 실측 · ADS1115").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("안정화 원본 · 통계 제외").performScrollTo().assertIsDisplayed()
+    }
+    @Test fun introUsesFullWidthAtLargeFont() {
+        compose.setContent {
+            val density = LocalDensity.current.density
+            CompositionLocalProvider(LocalDensity provides Density(density, 1.6f)) {
+                GardenTheme { Box(Modifier.width(320.dp)) { GardenIntro("오늘도, 초록 한 스푼", "작은 돌봄이 모여 나의 정원이 자라요.") } }
+            }
+        }
+        compose.onNodeWithText("뽀싹 돌봄 일지").assertIsDisplayed()
+        compose.onNodeWithText("오늘도, 초록 한 스푼").assertIsDisplayed()
+        snapshot("intro-large")
+    }
+    @Test fun dashboardUsesCareHeadingWithPlantRecords() {
+        val context = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext
+        val vm = MonitorViewModel(context.applicationContext as android.app.Application)
+        val plant = Cultivation("fixture", "바질", "창가의 바질", "2026-10-01T00:00:00Z", null, "ACTIVE", "")
+        val state = MonitorState(cultivations = listOf(Overview(plant, null, summary("NORMAL", "ADS1115", BigDecimal("120")))))
+        compose.setContent { GardenTheme { DashboardScreen(state, vm) } }
+        compose.onNodeWithText("뽀싹 돌봄 일지").assertIsDisplayed()
+        compose.onNodeWithText("오늘도, 초록 한 스푼").assertIsDisplayed()
+        compose.onNodeWithText("창가의 바질").assertExists()
+        snapshot("dashboard")
+    }
+    private fun snapshot(name: String) {
+        val context = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext
+        val file = java.io.File(context.getExternalFilesDir(null), "ui-$name.png")
+        val bitmap = compose.onRoot().captureToImage()
+        file.outputStream().use { bitmap.asAndroidBitmap().compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+        val automation = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().uiAutomation
+        fun shell(command: String) {
+            android.os.ParcelFileDescriptor.AutoCloseInputStream(automation.executeShellCommand(command)).use { it.readBytes() }
+        }
+        shell("mkdir -p /data/local/tmp/ppossak-ui")
+        shell("cp ${file.absolutePath} /data/local/tmp/ppossak-ui/$name.png")
     }
     @Test fun ownerPasswordIsClearedAfterEachLoginSubmission() {
         val submitted = mutableListOf<String>()
