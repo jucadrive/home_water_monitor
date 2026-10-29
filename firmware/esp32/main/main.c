@@ -11,6 +11,10 @@
 #include "ads1115.h"
 #include "tds_sensor.h"
 #include "worker.h"
+#include "temperature_runtime.h"
+#ifndef HWM_TEMPERATURE_MODE
+#define HWM_TEMPERATURE_MODE 0
+#endif
 #if defined(HWM_PERSONAL_CONFIG) && !defined(HWM_CREDENTIAL_FREE)
 #include "local_personal_config.h"
 #elif !defined(HWM_CREDENTIAL_FREE) && __has_include("local_config.h")
@@ -54,11 +58,17 @@ static void uuid(char out[37])
         bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7],
         bytes[8], bytes[9], bytes[10], bytes[11], bytes[12], bytes[13], bytes[14], bytes[15]);
 }
+static bool temperature_ready(uint64_t now)
+{
+    if (!HWM_TEMPERATURE_MODE) return true;
+    hwm_temperature t;
+    return hwm_temperature_latest(&t) && hwm_temperature_valid(&t, now, 0);
+}
 static void report(const char *probe)
 {
-    control.ready = hwm_transport_rx_ready();
+    control.ready = hwm_transport_rx_ready() && temperature_ready(now_ms());
     /* A sensor fault must not disable RETRY of an already frozen result. */
-    control.fault = control.fault || fatal || (sensor_failed && session.state == HWM_IDLE);
+    control.fault = control.fault || fatal || ((sensor_failed || hwm_temperature_faulted()) && session.state == HWM_IDLE);
     size_t length = hwm_status_json(&control, &session, now_ms(), probe, status_payload, sizeof(status_payload));
     if (length) hwm_transport_status(status_payload, length);
     reported = true;
@@ -85,6 +95,17 @@ static void start_sensor(void)
 static void sample(void)
 {
     if (!HWM_REAL_SENSOR) {
+        if (HWM_TEMPERATURE_MODE) {
+            uint64_t now = now_ms();
+            if (session.state != HWM_MEASURING || now < session.deadline_ms) return;
+            hwm_temperature t; hwm_sensor_value v; int16_t raw[HWM_SENSOR_WINDOW];
+            for (unsigned i = 0; i < HWM_SENSOR_WINDOW; i++) raw[i] = 8000 + session.count;
+            if (!hwm_temperature_latest(&t) || !hwm_temperature_valid(&t, now, session.started_ms)
+                || !hwm_tds_voltage(raw, &v) || !hwm_tds_compensate(&v, t.ten_thousandths)
+                || !hwm_sample_append_temperature(&session, now, now, v.tds_hundredths, v.voltage_hundredths, t.ten_thousandths, t.at_ms))
+                sensor_failure("temperature", now, 0);
+            return;
+        }
         if (hwm_sample_simulated(&session, now_ms()) && session.count % 10 == 0)
             printf("HWM_SAMPLE_COUNT samples=%u\n", session.count);
         return;
@@ -100,8 +121,9 @@ static void sample(void)
         }
         if (result.error != HWM_WORKER_OK) {
             sensor_failure(hwm_worker_error_name(result.error), result.at_ms, result.window_count);
-        } else if (result.seq != session.count + 1 || !hwm_sample_append_observed(&session,
-                       result.at_ms, now_ms(), result.value.tds_hundredths, result.value.voltage_hundredths)) {
+        } else if (result.seq != session.count + 1 || !(HWM_TEMPERATURE_MODE ? hwm_sample_append_temperature(&session, result.at_ms, now_ms(),
+                       result.value.tds_hundredths, result.value.voltage_hundredths, result.temperature.ten_thousandths, result.temperature.at_ms)
+                       : hwm_sample_append_observed(&session, result.at_ms, now_ms(), result.value.tds_hundredths, result.value.voltage_hundredths))) {
             sensor_failure("session_append", result.at_ms, 0);
         } else {
             printf("HWM_SENSOR_SAMPLE seq=%u tds_hundredths=%ld voltage_hundredths=%ld\n",
@@ -133,7 +155,7 @@ static void command(const char *line)
     if (cmd.type == HWM_COMMAND_STATUS) { status(); return; }
     if (HWM_CONTROL_MQTT) { printf("HWM_COMMAND_REJECTED reason=control_mode\n"); return; }
     bool accepted = !fatal && !control.fault && (cmd.type == HWM_COMMAND_START
-        ? hwm_start(&session, cmd.session_id, HWM_SAMPLE_TARGET, now_ms()) : hwm_retry(&session, cmd.session_id, now_ms()));
+        ? (temperature_ready(now_ms()) && hwm_start(&session, cmd.session_id, HWM_SAMPLE_TARGET, now_ms())) : hwm_retry(&session, cmd.session_id, now_ms()));
     if (accepted && cmd.type == HWM_COMMAND_START) start_sensor();
     printf("HWM_COMMAND_%s type=%s\n", accepted ? "ACCEPTED" : "REJECTED", cmd.type == HWM_COMMAND_START ? "START" : "RETRY");
     status();
@@ -185,7 +207,7 @@ static void network_event(const hwm_net_event *event)
         } else printf("HWM_CONFIRM_REJECTED reason=correlation\n");
     } else if (event->kind == HWM_NET_INVALID_CONFIRMATION) printf("HWM_CONFIRM_REJECTED reason=contract\n");
     else if (event->kind == HWM_NET_COMMAND) {
-        control.ready = hwm_transport_rx_ready();
+        control.ready = hwm_transport_rx_ready() && temperature_ready(now_ms());
         control.fault = control.fault || fatal;
         if (event->command.probe) {
             char window[37]; uuid(window);
@@ -208,7 +230,7 @@ void app_main(void)
     }
     hwm_transport_config config = {.ssid = HWM_WIFI_SSID, .wifi_password = HWM_WIFI_PASSWORD,
         .broker_uri = HWM_BROKER_URI, .device_id = HWM_DEVICE_ID, .username = HWM_MQTT_USERNAME,
-        .password = HWM_MQTT_PASSWORD, .open_wifi = HWM_WIFI_OPEN, .ca_pem = HWM_MQTT_CA_PEM};
+        .password = HWM_MQTT_PASSWORD, .open_wifi = HWM_WIFI_OPEN, .ca_pem = HWM_MQTT_CA_PEM, .results_version = HWM_TEMPERATURE_MODE ? 2 : 1};
     uart_config_t uart = {.baud_rate = 115200, .data_bits = UART_DATA_8_BITS, .parity = UART_PARITY_DISABLE,
         .stop_bits = UART_STOP_BITS_1, .flow_ctrl = UART_HW_FLOWCTRL_DISABLE, .source_clk = UART_SCLK_DEFAULT};
     if (!hwm_init(&session, HWM_DEVICE_ID) || uart_param_config(UART_NUM_0, &uart) != ESP_OK
@@ -220,6 +242,9 @@ void app_main(void)
         printf("HWM_FAULT category=control_initialization\n"); return;
     }
     hwm_set_real_sensor(&session, HWM_REAL_SENSOR);
+    hwm_set_temperature_mode(&session, HWM_TEMPERATURE_MODE);
+    if (!hwm_temperature_init(HWM_TEMPERATURE_MODE)) { fatal = true; control.fault = true; }
+    sensor_worker.temperature_enabled = HWM_TEMPERATURE_MODE != 0;
     if (HWM_REAL_SENSOR) {
         sensor_failed = !hwm_ads1115_init()
             || !hwm_worker_init(&sensor_worker, hwm_ads1115_read, NULL, HWM_WORKER_CAPACITY);

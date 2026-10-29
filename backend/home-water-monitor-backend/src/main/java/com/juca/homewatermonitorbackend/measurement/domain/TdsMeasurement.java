@@ -11,8 +11,11 @@ public record TdsMeasurement(
         int elapsedMs,
         BigDecimal tdsPpm,
         boolean isWarmup,
-        BigDecimal rawVoltageMv
+        BigDecimal rawVoltageMv, BigDecimal temperatureC, Integer temperatureElapsedMs
 ) {
+    public TdsMeasurement(UUID sessionId, int seq, int elapsedMs, BigDecimal tdsPpm, boolean isWarmup, BigDecimal rawVoltageMv) {
+        this(sessionId, seq, elapsedMs, tdsPpm, isWarmup, rawVoltageMv, null, null);
+    }
     // 측정 한 건의 기본 조건만 검사한다. 저장 정밀도·세션 개수는 저장 경로의 책임이다.
     public TdsMeasurement {
         Objects.requireNonNull(sessionId, "sessionId가 필요합니다.");
@@ -32,11 +35,13 @@ public record TdsMeasurement(
             throw new IllegalArgumentException("같은 sessionId와 seq를 가진 측정끼리 비교해야 합니다.");
         }
 
-        // 수치의 표현 자릿수는 무시하되 반올림·허용 오차 없이 네 필드를 모두 비교한다.
+        // 수치의 표현 자릿수는 무시하되 반올림·허용 오차 없이 v1 네 필드와 v2 온도 근거를 비교한다.
         boolean identical = tdsPpm.compareTo(incoming.tdsPpm()) == 0
                 && elapsedMs == incoming.elapsedMs()
                 && isWarmup == incoming.isWarmup()
-                && sameOptionalDecimal(rawVoltageMv, incoming.rawVoltageMv());
+                && sameOptionalDecimal(rawVoltageMv, incoming.rawVoltageMv())
+                && sameOptionalDecimal(temperatureC, incoming.temperatureC())
+                && Objects.equals(temperatureElapsedMs, incoming.temperatureElapsedMs());
         return identical ? TdsMeasurementComparisonResult.IDENTICAL : TdsMeasurementComparisonResult.CONFLICT;
     }
 

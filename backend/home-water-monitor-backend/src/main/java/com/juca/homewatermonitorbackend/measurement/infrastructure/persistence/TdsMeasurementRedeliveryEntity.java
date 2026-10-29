@@ -23,7 +23,9 @@ public class TdsMeasurementRedeliveryEntity {
             @AttributeOverride(name = "elapsedMs", column = @Column(name = "original_elapsed_ms", nullable = false)),
             @AttributeOverride(name = "tdsPpm", column = @Column(name = "original_tds_ppm", nullable = false, precision = 9, scale = 2)),
             @AttributeOverride(name = "isWarmup", column = @Column(name = "original_is_warmup", nullable = false)),
-            @AttributeOverride(name = "rawVoltageMv", column = @Column(name = "original_raw_voltage_mv", precision = 9, scale = 2))
+            @AttributeOverride(name = "rawVoltageMv", column = @Column(name = "original_raw_voltage_mv", precision = 9, scale = 2)),
+            @AttributeOverride(name = "temperatureC", column = @Column(name = "original_temperature_c", precision = 7, scale = 4)),
+            @AttributeOverride(name = "temperatureElapsedMs", column = @Column(name = "original_temperature_elapsed_ms"))
     })
     private TdsMeasurementSnapshot original;
 
@@ -32,7 +34,9 @@ public class TdsMeasurementRedeliveryEntity {
             @AttributeOverride(name = "elapsedMs", column = @Column(name = "incoming_elapsed_ms", nullable = false)),
             @AttributeOverride(name = "tdsPpm", column = @Column(name = "incoming_tds_ppm", nullable = false, precision = 9, scale = 2)),
             @AttributeOverride(name = "isWarmup", column = @Column(name = "incoming_is_warmup", nullable = false)),
-            @AttributeOverride(name = "rawVoltageMv", column = @Column(name = "incoming_raw_voltage_mv", precision = 9, scale = 2))
+            @AttributeOverride(name = "rawVoltageMv", column = @Column(name = "incoming_raw_voltage_mv", precision = 9, scale = 2)),
+            @AttributeOverride(name = "temperatureC", column = @Column(name = "incoming_temperature_c", precision = 7, scale = 4)),
+            @AttributeOverride(name = "temperatureElapsedMs", column = @Column(name = "incoming_temperature_elapsed_ms"))
     })
     private TdsMeasurementSnapshot incoming;
 

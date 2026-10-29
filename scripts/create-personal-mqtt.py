@@ -16,13 +16,18 @@ IMAGE = "eclipse-mosquitto:2.0.22"
 
 
 def acl(device_id):
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,63}", device_id):
+        raise ValueError("Invalid device ID")
     topic = "home/water/v1/" + device_id + "/"
+    v2 = "home/water/v2/" + device_id + "/"
     return ("user water-server\n" + "".join("topic " + mode + " " + topic + name + "\n"
             for mode, name in (("read", "events"), ("read", "status"),
                                ("write", "commands"), ("write", "preservation")))
+            + "topic read " + v2 + "events\n" + "topic write " + v2 + "preservation\n"
             + "\nuser esp32-bench\n" + "".join("topic " + mode + " " + topic + name + "\n"
             for mode, name in (("write", "events"), ("write", "status"),
-                               ("read", "commands"), ("read", "preservation"))))
+                               ("read", "commands"), ("read", "preservation")))
+            + "topic write " + v2 + "events\n" + "topic read " + v2 + "preservation\n")
 
 
 def write_new(path, content):
@@ -86,8 +91,13 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--directory", type=Path, default=Path(".tools/deployment/mqtt"))
     parser.add_argument("--device-id", default="esp32-bench")
+    parser.add_argument("--acl-output", type=Path, help="Write only a NEW ACL; do not read or rotate credentials")
     args = parser.parse_args()
     try:
+        if args.acl_output:
+            write_new(args.acl_output, acl(args.device_id))
+            print("Created new v1/v2 ACL only; existing credentials unchanged.")
+            return
         paths = create(args.directory, args.device_id)
     except (OSError, ValueError, RuntimeError, subprocess.SubprocessError):
         parser.exit(1, "MQTT setup failed. Check Docker/image and use a new private folder. Values withheld.\n")

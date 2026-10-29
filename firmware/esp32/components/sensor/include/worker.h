@@ -1,6 +1,7 @@
 #ifndef HWM_SENSOR_WORKER_H
 #define HWM_SENSOR_WORKER_H
 #include "tds_sensor.h"
+#include "temperature.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "freertos/task.h"
@@ -10,7 +11,7 @@
 #define HWM_WORKER_STACK_BYTES 4096
 typedef enum {
     HWM_WORKER_OK, HWM_WORKER_LATE, HWM_WORKER_ADC_READ, HWM_WORKER_ADC_RANGE,
-    HWM_WORKER_CONVERSION, HWM_WORKER_STATE, HWM_WORKER_QUEUE
+    HWM_WORKER_CONVERSION, HWM_WORKER_STATE, HWM_WORKER_QUEUE, HWM_WORKER_TEMPERATURE
 } hwm_worker_error;
 typedef struct { uint32_t generation; unsigned target; uint64_t started_ms; } hwm_worker_request;
 /* Only values cross the task boundary; no session or SDK-owned pointers. */
@@ -19,6 +20,7 @@ typedef struct {
     unsigned seq, window_count;
     uint64_t at_ms;
     hwm_sensor_value value;
+    hwm_temperature temperature;
     hwm_worker_error error;
 } hwm_worker_result;
 /* Zero-initialize; caller-owned storage must outlive the task. */
@@ -31,6 +33,7 @@ typedef struct {
     uint8_t request_storage[sizeof(hwm_worker_request)];
     uint8_t result_storage[HWM_WORKER_CAPACITY * sizeof(hwm_worker_result)];
     _Alignas(16) StackType_t stack[HWM_WORKER_STACK_BYTES / sizeof(StackType_t)];
+    bool temperature_enabled;
     hwm_adc_read read;
     void *context;
     atomic_bool busy;

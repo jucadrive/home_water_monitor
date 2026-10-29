@@ -36,13 +36,14 @@ public class AndroidAcceptanceServer {
                     "water-monitor.mqtt.inbound-client-id=android-results-rx","water-monitor.mqtt.outbound-client-id=android-results-tx",
                     "water-monitor.mqtt.allowed-device-ids=esp32-bench","water-monitor.mqtt.username=","water-monitor.mqtt.password=",
                     "water-monitor.control.enabled=true","water-monitor.control.status-client-id=android-status-rx","water-monitor.control.publish-client-id=android-control-tx"));
-            try(var context=app.run();var device=new DemonstrationDevice(uri,examples)) {
+            try(var context=app.run();var device=new DemonstrationDevice(uri,examples,args.length > 2 ? Path.of(args[2]) : null)) {
                 // A historical, unlinked empty session exercises legacy access without fabricating statistics.
                 context.getBean(ProcessTdsSessionService.class).process(new SaveNormalTdsSessionCommand(UUID.randomUUID(),
                         "legacy-fixture",null,1000,new BigDecimal("25"),"simulated-v1",List.of()));
                 int port=((WebServerApplicationContext)context).getWebServer().getPort();
                 var ready=JsonMapper.builder().build().createObjectNode().put("origin","http://127.0.0.1:"+port)
-                        .put("port",port).put("deviceId","esp32-bench").put("source","SIMULATED");
+                        .put("port",port).put("deviceId","esp32-bench").put("source","SIMULATED")
+                        .put("brokerUri",uri).put("temperatureFixture",args.length > 2);
                 Files.writeString(directory.resolve("ready.json"),ready.toString());
                 System.out.println("ANDROID_ACCEPTANCE_READY loopback=true source=SIMULATED");
                 long deadline=System.nanoTime()+TimeUnit.MINUTES.toNanos(30);
@@ -60,16 +61,23 @@ public class AndroidAcceptanceServer {
         final AtomicReference<Throwable> failure=new AtomicReference<>();
         final ScheduledExecutorService worker=Executors.newSingleThreadScheduledExecutor();
         final Map<String,byte[]> results=new HashMap<>();
-        final Path examples;
-        DemonstrationDevice(String uri,Path examples) throws Exception {
-            super(uri);this.examples=examples;
-            client.subscribe("home/water/v1/esp32-bench/preservation",1).waitForCompletion(5000);
+        final Path examples, temperaturePayload;
+        final int resultVersion;
+        DemonstrationDevice(String uri,Path examples,Path temperaturePayload) throws Exception {
+            super(uri);this.examples=examples;this.temperaturePayload=temperaturePayload;
+            this.resultVersion=temperaturePayload == null ? 1 : 2;
+            if (temperaturePayload != null) {
+                var fixture=JsonMapper.builder().build().readTree(Files.readAllBytes(temperaturePayload));
+                if(fixture.get("schemaVersion").intValue()!=2 || !"SIMULATED".equals(fixture.get("temperatureSource").asString()))
+                    throw new IllegalArgumentException("Only simulated v2 fixture is allowed");
+            }
+            client.subscribe("home/water/v"+resultVersion+"/esp32-bench/preservation",1).waitForCompletion(5000);
         }
         @Override synchronized void handle(MqttMessage message) {
             try {
                 var body=codec.tree(message.getPayload());String type=body.get("eventType").asString();
                 if("SESSION_PRESERVED".equals(type)) {
-                    if(body.get("sessionId").asString().equals(status.get("sessionId").asString())) {
+                    if(status.get("sessionId").isString() && body.get("sessionId").asString().equals(status.get("sessionId").asString())) {
                         status.put("state","IDLE").putNull("sessionId").put("sampleCount",0).put("finalized",false).put("round",0).put("attempt",0);
                         status.putObject("lastRelease").put("sessionId",body.get("sessionId").asString())
                                 .put("preservationResult",body.get("preservationResult").asString()).put("preservedSampleCount",body.get("preservedSampleCount").intValue())
@@ -81,7 +89,7 @@ public class AndroidAcceptanceServer {
                 if(executions.get()>before) {
                     String session=body.get("sessionId").asString();
                     if("START".equals(type)) {
-                        var result=(ObjectNode)JsonMapper.builder().build().readTree(Files.readAllBytes(examples.resolve("session-result-normal.json")));
+                        var result=(ObjectNode)JsonMapper.builder().build().readTree(Files.readAllBytes(temperaturePayload != null ? temperaturePayload : examples.resolve("session-result-normal.json")));
                         result.put("sessionId",session).put("deviceId","esp32-bench").putNull("startedAt").put("calibrationVersion","simulated-v1");
                         results.put(session,codec.encode(result));
                     }
@@ -93,7 +101,7 @@ public class AndroidAcceptanceServer {
             try {
                 var m=new MqttMessage(Objects.requireNonNull(results.get(session)));m.setQos(1);
                 var p=new MqttProperties();p.setPayloadFormat(true);p.setContentType("application/json");m.setProperties(p);
-                client.publish("home/water/v1/esp32-bench/events",m).waitForCompletion(5000);
+                client.publish("home/water/v"+resultVersion+"/esp32-bench/events",m).waitForCompletion(5000);
             } catch(Exception error) { failure.set(error); }
         }
         @Override public void close() throws Exception { worker.shutdownNow();super.close(); }

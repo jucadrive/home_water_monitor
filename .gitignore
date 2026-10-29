@@ -33,6 +33,7 @@ postgres.env
 tunnel.token
 mqtt.env
 mqtt-lan.env
+automatic-measurement.env
 device-mqtt.json
 mosquitto.passwd
 mosquitto.acl
@@ -72,6 +73,7 @@ __pycache__/
 /infra/personal/secrets/
 /infra/personal/app.jar
 /.codex-remote-attachments/
+/.codex-attachments/
 
 # Android SDK locations and signing material
 local.properties

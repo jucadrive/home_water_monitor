@@ -7,6 +7,7 @@ typedef struct {
     const char *ssid, *wifi_password, *broker_uri, *device_id, *username, *password;
     const char *ca_pem;
     bool open_wifi;
+    unsigned results_version; /* 0/default or 1=v1, 2=temperature results only */
 } hwm_transport_config;
 typedef enum {
     HWM_NET_NONE, HWM_NET_WIFI_UP, HWM_NET_WIFI_DOWN, HWM_NET_RX_CONNECTED, HWM_NET_RX_READY,

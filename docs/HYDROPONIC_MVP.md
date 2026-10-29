@@ -1,5 +1,9 @@
 # Hydroponic Nutrient Monitor MVP
 
+> 2026-10-29 승인 확장: [서버 매시간 자동 측정](tasks/HOURLY_AUTOMATIC_MEASUREMENT.md). 기존 수동 기능을 유지하고 명시한 장비/재배에만 기본 OFF의 서버 스케줄을 추가한다. 회차 중복 방지·누락 보충 없음·기존 START/보존 규칙을 따르며 [수동 운영 안내](HOURLY_AUTOMATIC_MEASUREMENT.md)로 사용자가 적용한다. 현재 구현/검증 결과는 HANDOFF가 기준이다.
+
+> 2026-10-28 승인 확장: [수온·온도 보정 준비](tasks/TEMPERATURE_COMPENSATION.md), [사용/실물 인수 안내](TEMPERATURE_SETUP.md). v1 과거 기록은 보존하고 v2 원본 수온·공식 버전·출처를 추가한다. 센서 없는 모의 검증과 실제 센서 정확도는 구분한다. 아래 초기 제외 범위는 당시 이력이다.
+
 2026-10-26 사용자 승인. 전환 배경은 ../MIGRATION.md, 실행·검증 상태는 tasks/HYDROPONIC_MIGRATION.md와 HANDOFF.md를 따른다.
 
 ## 목적·경계

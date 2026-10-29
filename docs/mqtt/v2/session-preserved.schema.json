@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:home-water-monitor:mqtt:v2:session-preserved",
+  "title": "SESSION_PRESERVED v1 payload",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "eventType",
+    "deviceId",
+    "sessionId",
+    "preservationResult",
+    "preservedSampleCount",
+    "comparison"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 2
+    },
+    "eventType": {
+      "const": "SESSION_PRESERVED"
+    },
+    "deviceId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"
+    },
+    "sessionId": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+    },
+    "preservationResult": {
+      "enum": [
+        "NORMAL",
+        "INCOMPLETE"
+      ]
+    },
+    "preservedSampleCount": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 60
+    },
+    "comparison": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "identicalCount",
+            "conflictCount"
+          ],
+          "properties": {
+            "identicalCount": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 60
+            },
+            "conflictCount": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 60
+            }
+          }
+        }
+      ]
+    }
+  },
+  "if": {
+    "properties": {
+      "preservationResult": {
+        "const": "NORMAL"
+      }
+    }
+  },
+  "then": {
+    "properties": {
+      "preservedSampleCount": {
+        "const": 60
+      }
+    }
+  },
+  "else": {
+    "properties": {
+      "preservedSampleCount": {
+        "maximum": 59
+      }
+    }
+  }
+}

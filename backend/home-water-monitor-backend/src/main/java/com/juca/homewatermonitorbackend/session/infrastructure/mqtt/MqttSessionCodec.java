@@ -39,12 +39,15 @@ public class MqttSessionCodec {
                     .onUnmappableCharacter(CodingErrorAction.REPORT).decode(ByteBuffer.wrap(bytes)).toString();
             require(!json.startsWith("\uFEFF"));
             JsonNode root = mapper.readTree(json);
-            fields(root, "schemaVersion", "eventType", "deviceId", "sessionId", "startedAt", "expectedSamples",
+            boolean v2 = integer(root.get("schemaVersion")) == 2;
+            if (v2) fields(root, "schemaVersion", "eventType", "deviceId", "sessionId", "startedAt", "expectedSamples",
+                    "samplingIntervalMs", "temperatureSource", "compensationVersion", "calibrationVersion", "measurements");
+            else fields(root, "schemaVersion", "eventType", "deviceId", "sessionId", "startedAt", "expectedSamples",
                     "samplingIntervalMs", "temperatureAssumedC", "calibrationVersion", "measurements");
-            require(integer(root.get("schemaVersion")) == 1 && text(root.get("eventType")).equals("SESSION_RESULT"));
+            require((v2 || integer(root.get("schemaVersion")) == 1) && text(root.get("eventType")).equals("SESSION_RESULT"));
             String device = text(root.get("deviceId"));
             require(device.matches("[A-Za-z0-9][A-Za-z0-9_-]{0,63}") && allowed.contains(device)
-                    && topic.equals("home/water/v1/" + device + "/events"));
+                    && topic.equals("home/water/v" + (v2 ? 2 : 1) + "/" + device + "/events"));
             String id = text(root.get("sessionId"));
             require(id.matches("(?i)[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"));
             require(integer(root.get("expectedSamples")) == 60);
@@ -55,16 +58,18 @@ public class MqttSessionCodec {
             require(samples.isArray() && samples.size() <= 60);
             var measurements = new ArrayList<SaveNormalTdsSessionCommand.Measurement>();
             for (JsonNode sample : samples) {
-                fields(sample, "seq", "elapsedMs", "tdsPpm", "isWarmup", "rawVoltageMv");
+                if (v2) fields(sample, "seq", "elapsedMs", "tdsPpm", "isWarmup", "rawVoltageMv", "temperatureC", "temperatureElapsedMs");
+                else fields(sample, "seq", "elapsedMs", "tdsPpm", "isWarmup", "rawVoltageMv");
                 require(sample.get("isWarmup").isBoolean());
                 measurements.add(new SaveNormalTdsSessionCommand.Measurement(integer(sample.get("seq")),
                         integer(sample.get("elapsedMs")), decimal(sample.get("tdsPpm"), false),
-                        sample.get("isWarmup").booleanValue(), decimal(sample.get("rawVoltageMv"), true)));
+                        sample.get("isWarmup").booleanValue(), decimal(sample.get("rawVoltageMv"), true),
+                        v2 ? decimal(sample.get("temperatureC"), false) : null, v2 ? integer(sample.get("temperatureElapsedMs")) : null));
             }
             require(measurements.size() < 60 || measurements.stream().anyMatch(m -> !m.isWarmup()));
             var command = new SaveNormalTdsSessionCommand(UUID.fromString(id), device, startedAt(root.get("startedAt")),
-                    integer(root.get("samplingIntervalMs")), decimal(root.get("temperatureAssumedC"), false),
-                    calibration, measurements);
+                    integer(root.get("samplingIntervalMs")), v2 ? null : decimal(root.get("temperatureAssumedC"), false),
+                    calibration, measurements, v2 ? text(root.get("temperatureSource")) : null, v2 ? text(root.get("compensationVersion")) : null);
             validator.validate(command);
             return command;
         } catch (Exception error) {
@@ -73,9 +78,10 @@ public class MqttSessionCodec {
         }
     }
 
-    public byte[] encode(String device, TdsSessionProcessingResult result) {
+    public byte[] encode(String device, TdsSessionProcessingResult result) { return encode(device, result, 1); }
+    public byte[] encode(String device, TdsSessionProcessingResult result, int version) {
         var root = mapper.createObjectNode();
-        root.put("schemaVersion", 1).put("eventType", "SESSION_PRESERVED").put("deviceId", device)
+        root.put("schemaVersion", version).put("eventType", "SESSION_PRESERVED").put("deviceId", device)
                 .put("sessionId", result.sessionId().toString()).put("preservationResult", result.preservationResult())
                 .put("preservedSampleCount", result.preservedSampleCount());
         if (result.redeliveryResult() == null) root.putNull("comparison");

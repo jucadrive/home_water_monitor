@@ -1,5 +1,7 @@
 # 뽀싹 Docker 수동 배포
 
+> 매시간 자동 측정 확장은 [별도 적용 안내](HOURLY_AUTOMATIC_MEASUREMENT.md)를 따른다. 기본 OFF이며 기존 Compose/비밀번호/포트를 보존하고 opt-in overlay와 V10 포함 실행 JAR를 사용자 수동으로 적용한다.
+
 > 아래는 기본3개 서비스 배포다. 이미 배포한 서버에 장비 없는 MQTT 준비를 추가하려면 [MQTT 추가 안내](PERSONAL_MQTT.md)를 따른다. 기존 compose.yml/DB 포트/로그인 비밀을 덮어쓰지 않고 별도 추가 Compose를 병합한다.
 
 이 문서는 **Windows 개발 PC에서 준비 → WinSCP로 전송 → Ubuntu에서 실행 → 앱 연결** 순서다. 미니 PC에는 Docker Engine과 Compose만 있으면 된다. JDK·Python·cloudflared를 Ubuntu에 따로 설치하지 않는다. 에이전트는 서버에 접속하지 않는다.

@@ -15,6 +15,9 @@ public class TdsMeasurementSnapshot {
     private boolean isWarmup;
     private BigDecimal rawVoltageMv;
 
+    private java.math.BigDecimal temperatureC;
+    private Integer temperatureElapsedMs;
+
     protected TdsMeasurementSnapshot() {
     }
 
@@ -23,5 +26,7 @@ public class TdsMeasurementSnapshot {
         tdsPpm = measurement.tdsPpm();
         isWarmup = measurement.isWarmup();
         rawVoltageMv = measurement.rawVoltageMv();
+        this.temperatureC = measurement.temperatureC();
+        this.temperatureElapsedMs = measurement.temperatureElapsedMs();
     }
 }

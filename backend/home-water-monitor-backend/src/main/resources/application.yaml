@@ -13,6 +13,10 @@ spring:
 
 # 재수신 및 통합 라우팅 트랜잭션의 잠금 대기를 제한하며 DB 전역 설정은 변경하지 않는다.
 water-monitor:
+  automatic-measurement:
+    enabled: ${PPOSSAK_AUTO_MEASUREMENT_ENABLED:false}
+    device-id: ${PPOSSAK_AUTO_MEASUREMENT_DEVICE_ID:}
+    cultivation-id: ${PPOSSAK_AUTO_MEASUREMENT_CULTIVATION_ID:}
   auth:
     username: ${PPOSSAK_AUTH_USERNAME:}
     password-hash: ${PPOSSAK_AUTH_PASSWORD_HASH:}

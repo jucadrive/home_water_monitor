@@ -119,7 +119,7 @@ static void mqtt_event(void *arg, esp_event_base_t base, int32_t id, void *data)
         if (result == 0) return;
         /* One invalid frame produces one notification; discard its remaining fragments without flooding the queue. */
         if (result < 0 && m->current_data_offset != 0 && !was_active) return;
-        e.kind = result == 1 && hwm_parse_confirmation(frame.body, frame.used, &e.confirmation)
+        e.kind = result == 1 && hwm_parse_confirmation_version(frame.body, frame.used, &e.confirmation, cfg.results_version == 2 ? 2 : 1)
             ? HWM_NET_CONFIRMATION : HWM_NET_INVALID_CONFIRMATION;
         /* Only bounded value data crosses tasks; SDK strings/properties expire after this callback. */
     } else return;
@@ -213,8 +213,8 @@ bool hwm_transport_init(const hwm_transport_config *config)
     /* Empty passwords never implicitly downgrade a protected configuration. */
     wifi.sta.threshold.authmode = cfg.open_wifi ? WIFI_AUTH_OPEN : WIFI_AUTH_WPA2_PSK;
     if (esp_wifi_set_mode(WIFI_MODE_STA) != ESP_OK || esp_wifi_set_config(WIFI_IF_STA, &wifi) != ESP_OK || esp_wifi_start() != ESP_OK) return false;
-    snprintf(preservation_topic, sizeof(preservation_topic), "home/water/v1/%s/preservation", cfg.device_id);
-    snprintf(events_topic, sizeof(events_topic), "home/water/v1/%s/events", cfg.device_id);
+    snprintf(preservation_topic, sizeof(preservation_topic), "home/water/v%u/%s/preservation", cfg.results_version == 2 ? 2 : 1, cfg.device_id);
+    snprintf(events_topic, sizeof(events_topic), "home/water/v%u/%s/events", cfg.results_version == 2 ? 2 : 1, cfg.device_id);
     snprintf(commands_topic,sizeof(commands_topic),"home/water/v1/%s/commands",cfg.device_id);
     snprintf(status_topic,sizeof(status_topic),"home/water/v1/%s/status",cfg.device_id);
     snprintf(rx_id, sizeof(rx_id), "hwm-%s-rx", cfg.device_id);

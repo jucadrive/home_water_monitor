@@ -21,7 +21,8 @@ public class TdsSessionInputValidator {
         // 필수 메타데이터가 현재 DB 컬럼에 저장 가능한지 확인
         requireText(command.deviceId(), 64, "deviceId");
         requireText(command.calibrationVersion(), 64, "calibrationVersion");
-        requireDecimal(command.temperatureAssumedC(), 5, "temperatureAssumedC");
+        TemperatureInput.validate(command);
+        if (command.temperatureSource() == null) requireDecimal(command.temperatureAssumedC(), 5, "temperatureAssumedC");
 
         // 현재 최종 목록은 정상/불완전 모두 1초 간격 측정을 처리
         if (command.samplingIntervalMs() != SAMPLING_INTERVAL_MS) {

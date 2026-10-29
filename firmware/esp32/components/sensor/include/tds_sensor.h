@@ -6,7 +6,7 @@
 #define HWM_SENSOR_WINDOW 25
 #define HWM_SENSOR_CALIBRATION "sen0244-uncalibrated-v1"
 typedef enum { HWM_SENSOR_PENDING, HWM_SENSOR_SAMPLE, HWM_SENSOR_ERROR } hwm_sensor_result;
-typedef struct { int32_t tds_hundredths, voltage_hundredths; } hwm_sensor_value;
+typedef struct { int32_t tds_hundredths, voltage_hundredths; int16_t adc_median; } hwm_sensor_value;
 typedef bool (*hwm_adc_read)(void *context, int16_t *raw);
 typedef struct {
     int16_t window[HWM_SENSOR_WINDOW];
@@ -18,7 +18,12 @@ typedef struct {
 
 /* Unit: ADS1115 signed counts, A0-GND with FSR +/-4.096V (125 microvolts/count). */
 bool hwm_tds_value(const int16_t raw[HWM_SENSOR_WINDOW], hwm_sensor_value *out);
+/* Uses unrounded ADC count and DS18B20 1/16 C steps; voltage remains the original voltage. */
+bool hwm_tds_voltage(const int16_t raw[HWM_SENSOR_WINDOW], hwm_sensor_value *out);
+bool hwm_tds_compensate(hwm_sensor_value *value, int32_t temperature_ten_thousandths);
 void hwm_sensor_begin(hwm_acquisition *a, uint64_t now);
 hwm_sensor_result hwm_sensor_poll(hwm_acquisition *a, uint64_t now,
+    hwm_adc_read read, void *context, hwm_sensor_value *out);
+hwm_sensor_result hwm_sensor_poll_temperature(hwm_acquisition *a, uint64_t now,
     hwm_adc_read read, void *context, hwm_sensor_value *out);
 #endif

@@ -117,6 +117,12 @@ class AppFlowTest {
         waitText("원본 60/60 · 통계 50개")
         compose.onNodeWithTag("session-list").performScrollToNode(hasText("가상 측정 · 실측 아님"))
         compose.onNodeWithText("가상 측정 · 실측 아님").assertIsDisplayed()
+        if (args.getString("expectTemperature") == "true") {
+            compose.onNodeWithTag("session-list").performScrollToNode(hasText("모의 평균 수온 · 25°C"))
+            compose.onNodeWithText("모의 평균 수온 · 25°C").assertIsDisplayed()
+            compose.onNodeWithText("25°C 기준 온도 보정 · TDS 미교정").assertDoesNotExist()
+            screenshot("temperature-result")
+        }
         screenshot("normal-result")
         compose.onNodeWithText("뒤로").performClick()
         compose.onNodeWithText("뒤로").performClick()

@@ -1,5 +1,7 @@
 # 백엔드 검증 실습
 
+> 온도 확장 실습: JDK25/Docker에서 `./gradlew.bat test --tests '*TemperatureMqtt*'`를 backend 루트에서 실행한다. v2 정상·불완전·빈 목록, 온도/시점 충돌, 출처 변경 거절, v1→v2 재해석 거절 및 모의 온도 추세 제외를 예측한 뒤 DB/조회값과 대조한다. [수온 모의 종단 재현](../TEMPERATURE_SETUP.md)과 [추가 코드 흐름](EXECUTION_FLOWS.md#9-수온-보정-v2의-추가-흐름)을 연결해 읽는다.
+
 각 실습은 **예측 → 코드 추적 → 로컬 재현 → 관측 → 반례/한계 설명** 순서로 진행한다. 예상 결과를 먼저 적고 나중에 설명과 비교한다. 이미 통과한 테스트를 실행했다는 사실만으로 코드 흐름을 이해했다고 판정하지 않는다.
 
 이 문서의 Gradle 명령은 재현 안내다. 문서 작성 과정에서 전체 테스트를 새로 실행했다는 뜻은 아니다. 최신 실제 실행 이력은 [HANDOFF](../HANDOFF.md), 기능별 인수는 tasks를 따른다. 체크 표시와 관측 기록은 직접 실행한 뒤에만 채운다.
@@ -254,3 +256,11 @@ Set-Location backend/home-water-monitor-backend
 설명 수준은 단계적으로 확인한다: **읽음 → 입력별 결과 예측 → 소스에서 근거 찾기 → 로컬 재현 → 다른 실패 상황으로 확장 설명**. 문서 완독이나 테스트 초록 표시만으로 마지막 단계가 완료되는 것은 아니다.
 
 품질 검증도 구분한다. 순수 테스트는 값/업무 규칙, 서비스 mock은 조율, PostgreSQL 통합은 제약/잠금/커밋, 브로커 종단은 전송/복구를 다룬다. 자동 backend Lint·아키텍처 검사는 현재 MISSING, 실제 장비·LAN/TLS·센서 정확도는 별도 인수다. 어떤 근거도 실행하지 않은 범위까지 확대하지 않는다.
+
+## 추가 실습: 매시간 자동 요청과 미확정 실행
+
+운영 자동 설정은 켜지 않고 테스트 시각으로 실습한다. 먼저 정각 직전 시작/정각 직후 재시작/정각59초와60초 콜백의 결과를 예측하고 HourlyMeasurementSlotTest로 확인한다.
+
+AutomaticMeasurementServiceTest에서 claim 실패 시 submit이 호출되지 않는지 확인한다. AutomaticMeasurementIntegrationTest는 독립 PostgreSQL의 동시6호출·수동/자동 경합·종료 재배·claim 직후 중단·명령 생성 직후 중단을 재현한다. 각 상황의 회차 outcome과 기존 명령 개수를 먼저 예상한 뒤 assertion과 비교한다. ControlMqttIntegrationTest의 hourlyStartUsesRealMqttTemperaturePreservationAndExistingReleaseProtection과 offlineHourlyRequestRecordsExistingNotDispatchedReasonWithoutCreatingResults는 실제 시험 브로커와 모의 장비를 사용한다. 물리 장비 시험이 아니다.
+
+backend JDK25·Docker에서 `./gradlew.bat test --tests '*HourlyMeasurementSlotTest' --tests '*AutomaticMeasurement*Test' --tests '*ControlMqttIntegrationTest'`로 선택 실행한다. 테스트의 SUBMITTED와 명령 ACCEPTED·정상 세션·버퍼 해제의 차이를 설명하고, 서버가 꺼졌던 두 시간을 왜 보충하지 않는지 논증한다. 수동 배포/SQL은 [운영 안내](../HOURLY_AUTOMATIC_MEASUREMENT.md)를 따른다.

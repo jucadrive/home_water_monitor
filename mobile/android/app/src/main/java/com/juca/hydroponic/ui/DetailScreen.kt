@@ -42,7 +42,9 @@ fun basis(value: String): String = when (value) { "MEASURED" -> "측정 시각";
                 Text("최근 실측 중앙값", style = MaterialTheme.typography.labelLarge)
                 Text(ppm(data.latestMeasurement?.medianTdsPpm), style = if (data.latestMeasurement?.medianTdsPpm == null) MaterialTheme.typography.headlineSmall else NumberStyle)
                 Text("마지막 전체 교체  ${date(data.lastFullReplacementAt)}")
-                Text("현재 실측: 미교정 · 실제 수온 보정 없음(25°C 가정)", style = MaterialTheme.typography.bodySmall)
+                data.latestMeasurement?.let { m ->
+                    Text(temperatureLabel(m), style = MaterialTheme.typography.bodySmall)
+                }
             } }
         }
         item { TrendChart(s.trend, s.maintenance) }

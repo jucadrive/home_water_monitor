@@ -5,7 +5,8 @@ param(
     [string]$AndroidSdk = $env:ANDROID_HOME,
     [string]$DeviceSerial,
     [string]$ServerOrigin,
-    [string]$MqttDeviceId
+    [string]$MqttDeviceId,
+    [switch]$TemperatureFixture
 )
 
 $ErrorActionPreference = 'Stop'
@@ -28,16 +29,17 @@ try {
         'Build' { @('assembleDebug', 'assembleRelease') }
         'Unit' { @('testDebugUnitTest') }
         'Full' { @('testDebugUnitTest', 'lintDebug', 'assembleDebug', 'assembleRelease') }
-        'Connected' { @('connectedDebugAndroidTest', '-Pandroid.testInstrumentationRunnerArguments.class=com.juca.hydroponic.FormsTest') }
+        'Connected' { @('connectedDebugAndroidTest', '-Pandroid.testInstrumentationRunnerArguments.class=com.juca.hydroponic.FormsTest,com.juca.hydroponic.TemperatureScreensTest') }
         'EndToEnd' {
             if (!$ServerOrigin -or !$MqttDeviceId) { throw 'EndToEnd requires an isolated -ServerOrigin and -MqttDeviceId.' }
             $originUri = [Uri]$ServerOrigin
             if ($originUri.Host -ne '127.0.0.1' -or $originUri.Scheme -ne 'http' -or $originUri.UserInfo -or $originUri.Query -or $originUri.Fragment) {
                 throw 'The acceptance server must use explicit HTTP loopback without credentials.'
             }
-            @('connectedDebugAndroidTest', '-Pandroid.testInstrumentationRunnerArguments.class=com.juca.hydroponic.FormsTest,com.juca.hydroponic.AppFlowTest',
+            @('connectedDebugAndroidTest', '-Pandroid.testInstrumentationRunnerArguments.class=com.juca.hydroponic.FormsTest,com.juca.hydroponic.TemperatureScreensTest,com.juca.hydroponic.AppFlowTest',
                 "-PacceptanceOrigin=$ServerOrigin", "-Pandroid.testInstrumentationRunnerArguments.serverOrigin=$ServerOrigin",
-                "-Pandroid.testInstrumentationRunnerArguments.deviceId=$MqttDeviceId")
+                "-Pandroid.testInstrumentationRunnerArguments.deviceId=$MqttDeviceId",
+                "-Pandroid.testInstrumentationRunnerArguments.expectTemperature=$($TemperatureFixture.IsPresent.ToString().ToLowerInvariant())")
         }
     }
     if ($Mode -in @('Connected', 'EndToEnd')) {

@@ -12,11 +12,16 @@ public class TdsSessionMetadataValidator {
 
     public TdsSessionMetadataValidator(TdsSessionLockAdapter locks) { this.locks = locks; }
 
+    private static boolean sameTemperature(java.math.BigDecimal a, java.math.BigDecimal b) {
+        return a == null ? b == null : b != null && a.compareTo(b) == 0;
+    }
     public void validate(TdsSessionEntity session, SaveNormalTdsSessionCommand command) {
         if (!Objects.equals(session.getDeviceId(), command.deviceId())
                 || !Objects.equals(session.getCalibrationVersion(), command.calibrationVersion())
                 || session.getSamplingIntervalMs() != command.samplingIntervalMs()
-                || session.getTemperatureAssumedC().compareTo(command.temperatureAssumedC()) != 0
+                || !sameTemperature(session.getTemperatureAssumedC(), command.temperatureAssumedC())
+                || !Objects.equals(session.getTemperatureSource(), command.temperatureSource())
+                || !Objects.equals(session.getCompensationVersion(), command.compensationVersion())
                 || !locks.matchesStartedAt(command.sessionId(), command.startedAt())) {
             throw new IllegalArgumentException("세션 메타데이터가 다릅니다.");
         }

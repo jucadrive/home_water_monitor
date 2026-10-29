@@ -5,11 +5,12 @@ param(
     [string]$Port = 'COM3',
     [ValidateSet('MQTT','UART')][string]$ControlMode = 'MQTT',
     [ValidateSet('ADS1115','SIMULATED')][string]$Source = 'ADS1115',
-    [switch]$Personal
+    [switch]$Personal,
+    [ValidateSet('ASSUMED','SIMULATED','DS18B20')][string]$Temperature = 'ASSUMED'
 )
 $ErrorActionPreference = 'Stop'
 if ($Mode -eq 'Build' -or $Mode -eq 'CredentialFree') {
-    & "$PSScriptRoot/esp32.ps1" -Action Build -IdfPath $IdfPath -ControlMode $ControlMode -Source $Source -CredentialFree:($Mode -eq 'CredentialFree') -Personal:$Personal
+    & "$PSScriptRoot/esp32.ps1" -Action Build -IdfPath $IdfPath -ControlMode $ControlMode -Source $Source -CredentialFree:($Mode -eq 'CredentialFree') -Personal:$Personal -Temperature $Temperature
 } else {
     # Export the pinned SDK Python environment, including its existing pyserial/psutil.
     & "$PSScriptRoot/esp32.ps1" -Action Version -IdfPath $IdfPath

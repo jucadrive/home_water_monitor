@@ -7,7 +7,8 @@ param(
     [ValidateSet('MQTT','UART')][string]$ControlMode = 'MQTT',
     [ValidateSet('ADS1115','SIMULATED')][string]$Source = 'ADS1115',
     [switch]$CredentialFree,
-    [switch]$Personal
+    [switch]$Personal,
+    [ValidateSet('ASSUMED','SIMULATED','DS18B20')][string]$Temperature = 'ASSUMED'
 )
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
@@ -23,6 +24,7 @@ $credentialFlag = if ($CredentialFree) { 'ON' } else { 'OFF' }
 $controlFlag = if ($ControlMode -eq 'MQTT') { 'ON' } else { 'OFF' }
 $sensorFlag = if ($Source -eq 'ADS1115') { 'ON' } else { 'OFF' }
 $personalFlag = if ($Personal) { 'ON' } else { 'OFF' }
+$temperatureFlag = switch ($Temperature) { 'ASSUMED' { 0 }; 'SIMULATED' { 1 }; 'DS18B20' { 2 } }
 $sdkConfigPath = Join-Path $project 'sdkconfig'
 if ($Personal -and ($Action -eq 'Build' -or $Action -eq 'Test')) {
     # Keep bench configuration intact; an existing ignored sdkconfig can override defaults.
@@ -43,7 +45,7 @@ if ($Personal -and ($Action -eq 'Build' -or $Action -eq 'Test')) {
 }
 switch ($Action) {
     'Version' { & python "$IdfPath/tools/idf.py" --version }
-    'Build' { & python "$IdfPath/tools/idf.py" -C $project -D "SDKCONFIG=$sdkConfigPath" -D HWM_TEST_IMAGE=OFF -D "HWM_CONTROL_MQTT=$controlFlag" -D "HWM_REAL_SENSOR=$sensorFlag" -D "HWM_CREDENTIAL_FREE=$credentialFlag" -D "HWM_PERSONAL_CONFIG=$personalFlag" build }
+    'Build' { & python "$IdfPath/tools/idf.py" -C $project -D "SDKCONFIG=$sdkConfigPath" -D HWM_TEST_IMAGE=OFF -D "HWM_CONTROL_MQTT=$controlFlag" -D "HWM_REAL_SENSOR=$sensorFlag" -D "HWM_CREDENTIAL_FREE=$credentialFlag" -D "HWM_PERSONAL_CONFIG=$personalFlag" -D "HWM_TEMP_MODE=$temperatureFlag" build }
     'Flash' {
         if ($ManualDownload) {
             # Use SDK-generated offsets/settings; keep an already entered ROM download mode.
@@ -58,6 +60,6 @@ switch ($Action) {
         } else { & python "$IdfPath/tools/idf.py" -C $project -p $Port -b 115200 flash }
     }
     'Monitor' { & python "$IdfPath/tools/idf.py" -C $project -p $Port monitor }
-    'Test' { & python "$IdfPath/tools/idf.py" -C $project -D "SDKCONFIG=$sdkConfigPath" -D HWM_TEST_IMAGE=ON -D "HWM_CONTROL_MQTT=$controlFlag" -D "HWM_REAL_SENSOR=$sensorFlag" -D "HWM_CREDENTIAL_FREE=$credentialFlag" -D "HWM_PERSONAL_CONFIG=$personalFlag" build }
+    'Test' { & python "$IdfPath/tools/idf.py" -C $project -D "SDKCONFIG=$sdkConfigPath" -D HWM_TEST_IMAGE=ON -D "HWM_CONTROL_MQTT=$controlFlag" -D "HWM_REAL_SENSOR=$sensorFlag" -D "HWM_CREDENTIAL_FREE=$credentialFlag" -D "HWM_PERSONAL_CONFIG=$personalFlag" -D "HWM_TEMP_MODE=$temperatureFlag" build }
 }
 if ($LASTEXITCODE -ne 0) { throw "ESP32 $Action failed: $LASTEXITCODE" }

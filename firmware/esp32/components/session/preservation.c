@@ -122,9 +122,10 @@ static bool comparison(reader *r, hwm_confirmation *c)
     return seen == 3 && take(r, '}');
 }
 
-bool hwm_parse_confirmation(const char *json, size_t length, hwm_confirmation *out)
+bool hwm_parse_confirmation_version(const char *json, size_t length, hwm_confirmation *out, unsigned version)
 {
     if (!json || !out || length == 0 || length > HWM_MAX_PAYLOAD) return false;
+    if (version != 1 && version != 2) return false;
     hwm_confirmation c = {0};
     reader r = { json, json + length };
     if (!take(&r, '{')) return false;
@@ -139,7 +140,7 @@ bool hwm_parse_confirmation(const char *json, size_t length, hwm_confirmation *o
         seen |= 1U << i;
         if (i == 0 || i == 5) {
             unsigned number;
-            if (!integer(&r, &number) || (i == 0 && number != 1)) return false;
+            if (!integer(&r, &number) || (i == 0 && number != version)) return false;
             if (i == 5) c.count = number;
         } else if (i == 6) {
             if (!comparison(&r, &c)) return false;
@@ -176,3 +177,6 @@ bool hwm_parse_confirmation(const char *json, size_t length, hwm_confirmation *o
     *out = c;
     return true;
 }
+
+bool hwm_parse_confirmation(const char *json, size_t length, hwm_confirmation *out)
+{ return hwm_parse_confirmation_version(json, length, out, 1); }

@@ -19,12 +19,16 @@ data class SessionSummary(val sessionId: String, val deviceId: String, val culti
     val displayAt: String, val timeBasis: String, val preservationResult: String, val preservedSampleCount: Int,
     val statsSampleCount: Int, val medianTdsPpm: BigDecimal?, val temperatureAssumedC: BigDecimal?,
     val calibrationVersion: String, val source: String, val minTdsPpm: BigDecimal? = null,
-    val maxTdsPpm: BigDecimal? = null, val avgTdsPpm: BigDecimal? = null) {
+    val maxTdsPpm: BigDecimal? = null, val avgTdsPpm: BigDecimal? = null,
+    val temperatureSource: String? = null, val compensationVersion: String? = null, val averageTemperatureC: BigDecimal? = null) {
+    fun eligibleForRealTrend() = source == "ADS1115" && preservationResult == "NORMAL" && medianTdsPpm != null &&
+        (temperatureSource == null || temperatureSource == "DS18B20")
     companion object {
         fun parse(j: JSONObject) = SessionSummary(j.getString("sessionId"), j.getString("deviceId"), j.text("cultivationId"),
             j.getString("displayAt"), j.getString("timeBasis"), j.getString("preservationResult"), j.getInt("preservedSampleCount"),
             j.getInt("statsSampleCount"), j.decimal("medianTdsPpm"), j.decimal("temperatureAssumedC"),
-            j.getString("calibrationVersion"), j.getString("source"), j.decimal("minTdsPpm"), j.decimal("maxTdsPpm"), j.decimal("avgTdsPpm"))
+            j.getString("calibrationVersion"), j.getString("source"), j.decimal("minTdsPpm"), j.decimal("maxTdsPpm"), j.decimal("avgTdsPpm"),
+            j.text("temperatureSource"), j.text("compensationVersion"), j.decimal("averageTemperatureC"))
     }
 }
 data class Overview(val cultivation: Cultivation, val lastFullReplacementAt: String?, val latestMeasurement: SessionSummary?) {
@@ -40,12 +44,13 @@ data class Maintenance(val id: String, val type: String, val replacementScope: S
             j.getString("occurredAt"), j.decimal("amountMl"), j.optString("memo"))
     }
 }
-data class Sample(val seq: Int, val elapsedMs: Int, val tdsPpm: BigDecimal, val isWarmup: Boolean, val rawVoltageMv: BigDecimal?)
+data class Sample(val seq: Int, val elapsedMs: Int, val tdsPpm: BigDecimal, val isWarmup: Boolean, val rawVoltageMv: BigDecimal?, val temperatureC: BigDecimal? = null, val temperatureElapsedMs: Int? = null)
 data class SessionDetail(val session: SessionSummary, val measurements: List<Sample>) {
     companion object {
         fun parse(j: JSONObject) = SessionDetail(SessionSummary.parse(j.getJSONObject("session")),
             j.getJSONArray("measurements").items { Sample(it.getInt("seq"), it.getInt("elapsedMs"),
-                it.get("tdsPpm").toString().toBigDecimal(), it.getBoolean("isWarmup"), it.decimal("rawVoltageMv")) })
+                it.get("tdsPpm").toString().toBigDecimal(), it.getBoolean("isWarmup"), it.decimal("rawVoltageMv"), it.decimal("temperatureC"),
+                if (it.isNull("temperatureElapsedMs")) null else it.getInt("temperatureElapsedMs")) })
     }
 }
 data class CommandStatus(val commandId: String, val sessionId: String, val commandState: String, val deviceId: String?,

@@ -42,7 +42,53 @@ class ControlMqttIntegrationTest {
     @Autowired javax.sql.DataSource dataSource;
     @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
     @Autowired com.juca.homewatermonitorbackend.session.application.control.CommandTransactionService control;
+    @Autowired com.juca.homewatermonitorbackend.session.application.control.ControlRuntime runtime;
+    @Autowired com.juca.homewatermonitorbackend.session.infrastructure.persistence.AutomaticMeasurementRunStore automaticRuns;
     final ControlMessageCodec codec=new ControlMessageCodec();
+    @Test void hourlyStartUsesRealMqttTemperaturePreservationAndExistingReleaseProtection() throws Exception {
+        var target=UUID.randomUUID();var slot=java.time.Instant.parse("2026-11-01T00:00:00Z");
+        request("/api/cultivations","{\"plantName\":\"basil\",\"name\":\"automatic\",\"startedAt\":\"2026-10-01T00:00:00Z\"}",target);
+        var auto=new com.juca.homewatermonitorbackend.session.application.automatic.AutomaticMeasurementService(
+            new com.juca.homewatermonitorbackend.session.application.automatic.AutomaticMeasurementProperties(true,"esp32-bench",target),automaticRuns,runtime,slot.minusSeconds(1));
+        try(var device=new ControlFakeDevice(uri())) {
+            auto.runAt(slot);auto.runAt(slot.plusSeconds(20));
+            var id=jdbc.queryForObject("select command_id from tds_automatic_measurement_run where cultivation_id=?",UUID.class,target);
+            awaitState(id.toString(),"ACCEPTED",10);assertEquals(1,device.executions.get());
+            assertEquals(409,start(UUID.randomUUID()).status());
+            var session=jdbc.queryForObject("select session_id from tds_device_command where command_id=?",UUID.class,id);
+            var result=(tools.jackson.databind.node.ObjectNode)tools.jackson.databind.json.JsonMapper.builder().build().readTree(java.nio.file.Files.readAllBytes(
+                java.nio.file.Path.of("../../docs/mqtt/v2/examples/session-result-normal.json")));
+            result.put("sessionId",session.toString()).put("deviceId","esp32-bench");
+            var message=new org.eclipse.paho.mqttv5.common.MqttMessage(codec.encode(result));message.setQos(1);
+            var properties=new org.eclipse.paho.mqttv5.common.packet.MqttProperties();properties.setPayloadFormat(true);properties.setContentType("application/json");message.setProperties(properties);
+            device.client.publish("home/water/v2/esp32-bench/events",message).waitForCompletion(5000);
+            var deadline=System.nanoTime()+java.util.concurrent.TimeUnit.SECONDS.toNanos(10);
+            while(jdbc.queryForObject("select count(*) from tds_session where session_id=?",Integer.class,session)==0 && System.nanoTime()<deadline)Thread.sleep(25);
+            assertEquals(60,jdbc.queryForObject("select count(temperature_c) from tds_measurement where session_id=?",Integer.class,session));
+            assertEquals(50,jdbc.queryForObject("select stats_sample_count from tds_session where session_id=?",Integer.class,session));
+            assertEquals(target,jdbc.queryForObject("select cultivation_id from tds_device_command where command_id=?",UUID.class,id));
+            synchronized(device) {
+                device.status.put("state","IDLE").putNull("sessionId").put("sampleCount",0).put("finalized",false).put("round",0).put("attempt",0);
+                device.status.putObject("lastRelease").put("sessionId",session.toString()).put("preservationResult","NORMAL").put("preservedSampleCount",60).put("reason","PRESERVATION_CONFIRMED");device.emit();
+            }
+            while(!"RELEASE_CONFIRMED".equals(command(id.toString()).body().get("deviceBuffer").asString()) && System.nanoTime()<deadline)Thread.sleep(25);
+            assertEquals("RELEASE_CONFIRMED",command(id.toString()).body().get("deviceBuffer").asString());
+        } finally {
+            jdbc.update("update tds_device_control set active_command_id=null,held_session_id=null where held_session_id in (select session_id from tds_device_command where cultivation_id=?)",target);
+        }
+    }
+    @Test void offlineHourlyRequestRecordsExistingNotDispatchedReasonWithoutCreatingResults() throws Exception {
+        var target=UUID.randomUUID();var slot=java.time.Instant.parse("2026-11-01T01:00:00Z");
+        request("/api/cultivations","{\"plantName\":\"basil\",\"name\":\"offline\",\"startedAt\":\"2026-10-01T00:00:00Z\"}",target);
+        var auto=new com.juca.homewatermonitorbackend.session.application.automatic.AutomaticMeasurementService(
+            new com.juca.homewatermonitorbackend.session.application.automatic.AutomaticMeasurementProperties(true,"esp32-bench",target),automaticRuns,runtime,slot.minusSeconds(1));
+        auto.runAt(slot);auto.runAt(slot.plusSeconds(10));
+        var id=jdbc.queryForObject("select command_id from tds_automatic_measurement_run where cultivation_id=?",UUID.class,target);
+        awaitState(id.toString(),"NOT_DISPATCHED",10);
+        assertNotNull(jdbc.queryForObject("select reason from tds_device_command where command_id=?",String.class,id));
+        assertEquals(0,jdbc.queryForObject("select count(*) from tds_session s join tds_device_command c using(session_id) where c.command_id=?",Integer.class,id));
+        assertEquals(1,jdbc.queryForObject("select count(*) from tds_device_command where cultivation_id=?",Integer.class,target));
+    }
     record Reply(int status,JsonNode body){}
     Reply request(String path,String body,UUID key) throws Exception {
         try(var client=HttpClient.newHttpClient()) {

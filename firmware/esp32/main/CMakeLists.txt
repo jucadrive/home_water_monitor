@@ -20,3 +20,8 @@ if(HWM_REAL_SENSOR)
 else()
     target_compile_definitions(${COMPONENT_LIB} PRIVATE HWM_REAL_SENSOR=0)
 endif()
+
+if(NOT DEFINED HWM_TEMP_MODE)
+    set(HWM_TEMP_MODE 0)
+endif()
+target_compile_definitions(${COMPONENT_LIB} PRIVATE HWM_TEMPERATURE_MODE=${HWM_TEMP_MODE})
