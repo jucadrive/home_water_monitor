@@ -1,3 +1,68 @@
+# 온도·UI·매시간 자동 측정 Git 통합 승인 — 2026-10-29
+
+- 사용자가 지금까지 변경의 기존 절차대로 Git 반영을 지시했다. 소스·테스트·공개 계약/의존성 lock·배포 템플릿·문서만 stage/commit/push/PR/main 병합한다. 실제 비밀 설정·개인 헤더·APK/JAR/bin·캡처·첨부·로컬 검증 산출물은 제외한다. 첨부 폴더와 운영 자동 측정 env는 루트 ignore로 보호한다.
+- 기존 codex/temperature-compensation 사용, 기준 main4ba56eb. 커밋 초안 `feat: add temperature-aware and hourly automatic measurements`. 강제 Git 작업/브랜치 삭제·운영 서버/장비 조작은 포함하지 않는다.
+- 성공한 로컬 결과를 재사용한다: backend Full261/실패·오류·건너뜀0, Android JVM21/Lint 오류0·기존 경고11/UI17범위(16성공+수정1재검증), C Decimal2080/sanitizer/prefix·최종 개인 DS18B20 빌드·MQTT12케이스/TLS6그룹·실물 정상1회/사용자 SQL 확인. 이후 변경은 문서/ignore뿐이다. 원격 CI는 backend Full만 실행하므로 Android/펌웨어 검증과 구분한다.
+- 사용자는 전원 어댑터로 이동 완료를 보고했다. 이동 후 실제 정각 자동 회차/장기·정확도·교정 인수는 아직 NOT VERIFIED다. 서버 배포/켜기는 사용자 보고이며 에이전트 서버 SSH 없음. 최종 PR/병합 SHA/CI는 GitHub 이력을 기준으로 확인한다.
+
+# 서버 매시간 자동 측정 로컬 검증 완료 — 2026-10-29
+
+- 후속 사용자 보고: 수동 서버 배포/자동 측정 활성화 절차 수행 완료. 실제 정각 회차의 SQL/정상 보존 결과는 아직 미확인이다. 에이전트 서버 접속/원격 활성화 없음.
+- 노트북→USB 충전기 전원 이동 문의에 앞서 COM5 STATUS만 읽어 IDLE/sessionnone/samples0/wifi_up1/rx_ready1 확인. 현재 미확정 원본 없음. 전원 이동 뒤 재연결/자동 측정 결과는 아직 NOT VERIFIED다. 측정 중에는 RAM 원본이 있으므로 전원 분리하지 않는다.
+
+- 사용자 전체 계획 승인. [작업 명세](tasks/HOURLY_AUTOMATIC_MEASUREMENT.md). 기본 OFF/명시 장비·재배/매 정각/기존 START/회차 유일 키/재시작 보충 없음 구현, 새 V10만 추가했다. 기존 V1~V9는 편집하지 않는다.
+- 최종 backend Full PASS/exit0/5분22초: 261개 새 실행, 실패0/오류0/건너뜀0(자동 신규23+기존238). 가상 시각·기본OFF/대상 설정·중복/동시성·수동 충돌/미확정·종료 재배·재시작 및 실제 시험 브로커의 자동 START→온도60원본/통계50→보존/해제·오프라인 검증. 최초 Full 테스트2개 실패는 설정 fixture/결과 파서 보완 후 해소했다. 앱/펌웨어 검증은 변경이 없어 재사용한다. 로컬 범위 VERIFIED, 사용자 리뷰/운영 정각 인수 전 DONE 아님.
+- Compose ON/OFF config PASS, 기존 서비스/포트 유지. 비밀 검사95파일 이슈0·diff/문서 링크 검사 PASS·신규 Java/Kotlin200줄 초과 없음, backend 정적/아키텍처 검사는 MISSING. 증거 `.tools/hourly-automatic/result.json`, `full-final-results`. Testcontainers 정리 확인.
+- 전송 폴더 `.tools/hourly-automatic/server-upload/`에 실행 JAR·추가 Compose·기본OFF env·SHA 목록 준비. 사용자가 활성 재배 UUID/장비를 지정해 수동 배포·켜기 후 다음 정각 결과를 확인해야 한다. 실제 운영 자동 측정은 NOT RUN이다.
+- 서버 SSH/운영 적용/ESP32 명령 없음. 기존 온도/UI 변경·첨부·비밀 설정 유지. 커밋/푸시 없음. [수동 적용 안내](HOURLY_AUTOMATIC_MEASUREMENT.md)는 검증 완료 후 사용자 적용용이다.
+
+# 측정 기술 설명 상세로 이동 — 2026-10-29
+
+- 사용자 승인 구현 VERIFIED: 결과 요약/재배 최근 측정에서 보정·미교정 설명 제거, 측정 상세 펼침에서 교정·보정·센서 출처/버전을 확인한다. 실제 평균 수온과 과거 가정 수온·가상/미확인 출처 구분은 유지한다. 수온 기반 TDS 계산·계약·서버·펌웨어는 변경하지 않았다.
+- Android Full PASS/JVM21개 새 실행/실패0·오류0·건너뜀0/Lint 오류0·기존 경고11/debug 및 미서명 release PASS. 에뮬레이터 UI16개 성공 재사용+수정한1개 단독 PASS로17개 범위 검증. 이전 요구 테스트 및 LazyColumn 스크롤 보완2회, 상세 [작업 기록](tasks/ANDROID_UI_SIMPLIFICATION.md).
+- 일반 HTTPS APK `.tools/temperature-ui-20261029/ppossak-temperature-ui-debug.apk`, 결과/캡처는 같은 폴더. 개인 폰 설치 NOT RUN, 커밋·푸시 없음, 기존 미커밋·첨부·비밀 설정 보존. 전체 DONE은 사용자 리뷰 후다.
+
+# 온도 센서 실물 정상 경로 인수 — 2026-10-29
+
+- 현재 상태 VERIFIED: DS18B20 수온 측정→온도 보정→MQTT v2→서버 보존→앱 표시→버퍼 해제의 정상1회 인수 완료. 앱 ACCEPTED/NORMAL/RELEASE_CONFIRMED/원본60/수온16.13°C, 직접 UART 원본1~60 각1회·fault0·해제1회·최종IDLE/보관0 확인.
+- 사용자가 제공한 읽기 전용 SQL 실행 결과가 기대값과 같다고 확인했다. DS18B20 출처/온도 원본60/통계50/가정 수온NULL 및 SQL의 기대 결과 일치라는 사용자 보고이며, 에이전트가 서버 DB를 직접 조회한 것은 아니다. 서버·앱 적용도 사용자 수행, 에이전트 SSH 없음.
+- 센서 없는 준비 검증 결과는 재사용하며 추가 측정/빌드/전체 테스트를 반복하지 않았다. 기준 온도계 비교·수온 절대 정확도·TDS 표준액 교정·센서 분리/복구·장기 운전은 NOT VERIFIED. 정상 경로 성공을 이 항목들의 성공으로 확대하지 않는다.
+- 변경은 codex/temperature-compensation에 unstaged 상태, 커밋·푸시 없음. 상세 [작업 명세](tasks/TEMPERATURE_COMPENSATION.md). 다음은 사용자 최종 리뷰와 필요 시 별도 정확도/장애 인수다.
+
+## 실물 진행 이력(아래 대기·미실행 표시는 당시 상태)
+
+- DS18B20 이미지 실물 정상1회: UART seq1~60 각1회/센서fault0/BUFFER_RELEASED1회/최종IDLE·보관0·Wi-Fi/MQTT유지, observer exit0/PASS. 증거 `.tools/esp32-personal/accept-565fd13ce4c74536afddaebc9e145537.json`. 사용자는 앱 ACCEPTED/NORMAL/RELEASE_CONFIRMED/원본60/수온16.13°C/전압 출처ADS1115 보고. DS18B20 온도 출처·DB원본60/통계50/온도60·공식 버전 직접 대조는 대기다. 기준 온도계 비교·온도 정확도·교정은 NOT VERIFIED.
+- 앱 문구 확인: `25°C 기준 온도 보정 · TDS 미교정`은 temperature compensation 버전에 따라 표시되며 실제 수온25°C 가정 문구가 아니다. 실제 수온을 기준25°C로 환산하는 보정과 표준액 교정을 구분한다. ADS1115는 TDS 전압 출처이고 온도 출처는 상세의 별도 필드다.
+
+- 사용자 수동 다운로드 모드 후 COM5에 최종 DS18B20 이미지 Flash exit0/각 이미지 hash verified, NVS 전체 삭제 없음. 이후 직접 UART IDLE/sessionnone/samples0/wifi_up1/rx_ready1 확인. 실제 온도 준비/측정 성공은 아직 미확인이다.
+- 읽기 전용 UART 관측기를 시작했다(STATUS만 전송). 사용자가 앱 측정1회를 시작하고 온도·NORMAL/원본60·해제 및 DBeaver 확인을 진행할 단계다. Flash 증거 `.tools/temperature/physical/flash.log`, 상태 `after-flash-status.json`, 관측 로그 `measurement-observer.log`, 읽기 전용 SQL `verify-temperature.sql`. 서버 SSH·에이전트 START 없음.
+
+- 후속 사용자 보고: 서버 반영 및 새 APK 설치 완료. 에이전트가 서버에 접속하거나 DB/V9를 직접 확인한 결과는 아니다. COM5 업로드 직전 UART 재확인 IDLE/sessionnone/samples0/wifi_up1/rx_ready1. 현재 USB COM5/COM6가 보이나 응답한 보드 COM5만 대상으로 한다.
+- 최종 bin SHA `BEFE81A368F47BDCDDCD826205D9576550882CAFFFB132E1DDEFD2C04AAE1177` 일치, build cache PERSONAL ON/REAL_SENSOR ON/TEMP_MODE2/CREDENTIAL_FREE OFF/TEST_IMAGE OFF 및 TLS 기간 검증 ON 확인. 성공한 빌드를 반복하지 않는다. 사용자 수동 BOOT/EN 다운로드 모드 진입 대기, 아직 Flash/실물 온도 측정 NOT RUN.
+
+- 사용자 실물 진행 지시, 배선 보고 VCC5번/GND10번/DQ a30↔b30↔D27. UART COM5에서 IDLE/sessionnone/samples0·Wi-Fi/MQTT 정상 확인, START/재부팅 없음.
+- 서버/새 APK는 아직 미적용이라는 사용자 답변에 따라 장비 업로드 전 수동 서버 적용을 진행한다. 검증된 JAR+v1/v2 ACL을 `.tools/temperature/server-upload-20261029`에 준비했고 [적용 안내](TEMPERATURE_SETUP.md)에 백업·ACL·backend/V9·앱 순서를 기록했다. 실제 운영 적용 결과는 아직 미확인이다.
+- adb 기기 없음. 서버 수동 적용→앱 업데이트→보관0 재확인→DS18B20 Flash→실물 정상 인수가 다음 단계다. 서버 SSH 금지 유지·현재 펌웨어 업로드/실온도 측정 NOT RUN. 신규 최초 계획 재승인 요청 없이 사용자의 실물 재개 범위에서 순차 수행한다.
+
+# 온도 보정 준비 완료 기록 — 2026-10-29
+
+- 센서 없는 준비 범위 VERIFIED. backend 온도 저장/조회·v1/v2 MQTT·새 V9, 펌웨어 DS18B20/모의 공급·온도 보정·오류 처리, 앱 온도/출처 표시 구현과 모의 인수를 완료했다. 상세 [온도 작업 명세](tasks/TEMPERATURE_COMPENSATION.md), 다음 실물 절차 [TEMPERATURE_SETUP.md](TEMPERATURE_SETUP.md).
+- 최종 backend Full238개/JVM21개/격리 앱 종단16개/후속 온도 UI3개 각각 새 실행 PASS, 실패0/오류0/건너뜀0. Android 빌드 PASS·Lint 오류0/기존 경고11. C Decimal2080벡터·sanitizer·prefix/재시도/해제 PASS, MQTT 저장/조회12케이스·TLS/ACL6그룹 PASS. backend 정적/아키텍처 자동 검사는 MISSING이다.
+- 마지막 정수 유리수 계산 변경의 C 검증도 PASS. 기존 C payload12개 SHA 동일 확인으로 성공한 종단 결과를 재사용했다. 최종 펌웨어 빌드/산출물은 작업 명세의 최종 산출물 기록을 따른다. 기존 테스트를 처음부터 다시 수행할 이유는 없다.
+- 결과 집계 `.tools/temperature/verification.json`. 일반 HTTPS APK `.tools/temperature/ppossak-temperature-debug.apk`. 운영 서버/보드 미적용, 실제 DS18B20 통신·온도 정확도·TDS 교정은 NOT VERIFIED. 센서 도착 후 사용자 수동 ACL→backend/V9→앱→장비 적용과 실제 인수가 필요하다.
+- Git codex/temperature-compensation, 변경 unstaged·커밋/푸시 없음. 서버 SSH·운영 배포·보드 업로드 없음. 기존 첨부/비밀 설정 보존. 커밋 초안 `feat: add temperature-aware measurement preparation`. 전체 DONE은 사용자 최종 리뷰 후다.
+
+## 이전 진행 체크포인트 — 2026-10-28
+
+최신 체크포인트: Phase1 관련21개 새 실행 PASS(앞선236개 전체 중 migration 기대개수1개 수정 후 재검증), Phase2 C호스트 Decimal2080벡터/sanitizer/prefix60/재시도·해제 PASS·CredentialFree/개인DS18B20 및 기존 Unity 이미지 컴파일 PASS. 개인 DS18B20 binary978272bytes/파티션7%여유(업로드 없음), 드라이버0.4.0/onewire1.1.2 lock. Phase3 Android Full PASS(JVM21개 예상·새 TemperatureModel4개 확인, 전체집계 후 기록), UI Connected15개 실행 중. 자세한 단계 결과는 온도 작업 명세를 따른다. 아래 초기 IN_PROGRESS/실패는 이력이다.
+
+- 사용자 전체 계획 승인, [tasks/TEMPERATURE_COMPENSATION.md](tasks/TEMPERATURE_COMPENSATION.md). 브랜치 codex/temperature-compensation, 기준 main4ba56eb. 초기 미추적 .codex-attachments/는 사용자 첨부로 보존하고 읽거나 커밋하지 않는다. 서버 SSH/운영 배포/실물 업로드 없음.
+- Phase1 IN_PROGRESS: v1 유지·측정 결과/확인 v2 추가, 원본 온도/온도시점·세션 출처/공식, V9·저장/조회/재수신 스냅샷, 모의 온도 실측 추세 제외 구현. compileJava/compileTestJava PASS. 새 계약/통합20개 검증 후 전체 build 진행 중이며 아직 VERIFIED가 아니다.
+- 수정1/5 모의 예제의 잘못된 교정 ID, 수정2/5 진단 테스트 SQL 조인, 수정3/5 V9에 따른 업그레이드 개수3→4 및 과거 온도NULL 검사 추가. 테스트 삭제/조건 약화 없음. ACL 생성 단위5개 PASS(샌드박스 임시파일 접근 거절 후 승인환경에서 재실행). 실제 비밀 파일 변경 없음.
+- 남은 Phase: backend 전체 회귀 성공→펌웨어 보정·모의/DS18B20 드라이버 및 빌드/호스트 시험→Android 표시/회귀→격리 종단 인수·수동 배포/실물 인수 안내. 커밋·푸시 없음.
+
+---
+
 # Android UI 사용자 검수·Git 통합 승인 — 2026-10-28
 
 - 사용자가 수정 APK 확인 후 만족 의사를 표시하고 현재 UI 변경의 커밋·푸시·PR·main 병합을 명시 승인했다. UI 작업 DONE. 승인 범위는 소스·테스트·검증 스크립트·문서이며 실제 비밀 설정·APK·로컬 캡처/검증 산출물은 제외한다.

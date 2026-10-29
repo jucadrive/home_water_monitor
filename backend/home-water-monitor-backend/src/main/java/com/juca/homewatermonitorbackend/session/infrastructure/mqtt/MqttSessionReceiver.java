@@ -50,8 +50,9 @@ public class MqttSessionReceiver implements MessageHandler {
             // 이 호출은 별도 서비스 프록시의 실제 커밋까지 마친 뒤 반환한다.
             var result = processing.process(command);
             stage = "PUBLISH";
-            publisher.accept("home/water/v1/" + command.deviceId() + "/preservation",
-                    codec.encode(command.deviceId(), result));
+            int version = command.temperatureSource() == null ? 1 : 2;
+            publisher.accept("home/water/v" + version + "/" + command.deviceId() + "/preservation",
+                    codec.encode(command.deviceId(), result, version));
         } catch (RuntimeException error) {
             log.warn("MQTT processing failed stage={}", stage);
         } finally {

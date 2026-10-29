@@ -19,6 +19,8 @@
 - 2026-10-27 사용자 지시로 서버 배포는 사용자가 직접 한다. 별도 재개 지시 전 미니 PC SSH·원격 조작을 하지 않으며 docs/PERSONAL_DEPLOYMENT.md의 수동 자료만 제공한다.
 - 실물 없는 MQTT 준비 승인: docs/tasks/PERSONAL_MQTT_READINESS.md. Docker 내부 브로커·인증/ACL·모의 인수만 지금 수행하며 LAN 공개·실물/펌웨어 업로드는 보류한다.
 - 2026-10-27 실물 재개 승인: docs/tasks/PERSONAL_DEVICE_ACCEPTANCE.md. LAN 전용 TLS·개인 설정·펌웨어/실측 인수를 진행하며 서버 원격 조작 금지는 유지한다.
+- 2026-10-28 온도 준비 전체 승인: docs/tasks/TEMPERATURE_COMPENSATION.md. v2 온도 계약·새 DB 마이그레이션·공식 드라이버·앱·모의 인수이며 보드 업로드/운영 배포는 제외한다.
+- 2026-10-29 서버 매시간 자동 측정 전체 승인: docs/tasks/HOURLY_AUTOMATIC_MEASUREMENT.md. 기본 OFF·지정 장비/재배·회차 중복 방지/기록 및 기존 START 재사용, 서버 운영 적용은 사용자 수동이다.
 - 원본 비교 정책: docs/NEXT_MEASUREMENT_COMPARISON.md. 구현·검증 상태는 실제 소스와 HANDOFF를 확인한다.
 - 구축·기능별 인수 조건과 승인 범위는 docs/tasks/에 기록한다.
 - 과거 페어 프로그래밍·사용자 직접 작성 지침은 현재 운영 규칙이 아니다.
@@ -40,7 +42,7 @@
 - 신규 세션 어댑터의 MANDATORY·persist 경로를 임의 변경하지 않는다.
 - 원본 식별은 sessionId + seq이며 기존 원본을 덮어쓰지 않는다.
 - 안정화 원본은 보존하되 정상 통계 계산에서 제외한다.
-- 재수신 비교는 합의된 네 필드와 BigDecimal.compareTo를 따른다.
+- v1 재수신은 합의된 네 필드, v2는 추가 온도·온도시점까지 비교하며 BigDecimal.compareTo를 따른다. 온도 준비 명세의 승인 범위를 유지한다.
 - 저장 호출 반환만으로 커밋 완료를 단정하지 않는다. MQTT 보존 확인은 실제 커밋 이후다.
 - 외부 호출의 실패·타임아웃·재시도는 승인된 계약과 테스트로 확인한다.
 - 적용된 모든 마이그레이션은 편집·포맷하지 않는다. 승인 후 새 마이그레이션을 추가한다.

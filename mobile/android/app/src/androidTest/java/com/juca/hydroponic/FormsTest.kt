@@ -100,13 +100,17 @@ class FormsTest {
         compose.onNodeWithText("세션 ID").assertDoesNotExist()
         compose.onNodeWithText("보존 원본").performScrollTo().assertIsDisplayed()
     }
-    @Test fun measuredResultRetainsUncalibratedWarningAndRawSamples() {
+    @Test fun measuredResultKeepsCalibrationInDetailsAndRawSamples() {
         val session = summary("NORMAL", "ADS1115", BigDecimal("120")).copy(calibrationVersion = "sen0244-uncalibrated-v1")
         compose.setContent { GardenTheme { SessionScreen(SessionDetail(session,
             listOf(Sample(1, 1000, BigDecimal("121"), true, BigDecimal("300"))))) } }
-        compose.onNodeWithText("미교정 측정").assertExists()
+        compose.onNodeWithText("TDS 미교정").assertDoesNotExist()
+        compose.onNodeWithText("ADS1115").assertDoesNotExist()
         snapshot("result")
-        compose.onNodeWithText("센서 실측 · ADS1115").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("상세 정보 보기").performScrollTo().performClick()
+        compose.onNodeWithText("TDS 미교정").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("ADS1115").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("session-list").performScrollToNode(hasText("안정화 원본 · 통계 제외"))
         compose.onNodeWithText("안정화 원본 · 통계 제외").performScrollTo().assertIsDisplayed()
     }
     @Test fun introUsesFullWidthAtLargeFont() {

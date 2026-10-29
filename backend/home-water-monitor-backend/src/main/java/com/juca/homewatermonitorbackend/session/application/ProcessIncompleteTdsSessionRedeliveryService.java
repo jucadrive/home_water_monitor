@@ -58,9 +58,9 @@ public class ProcessIncompleteTdsSessionRedeliveryService {
             var incoming = incomingBySeq.get(original.getSeq());
             return new TdsMeasurementRedeliveryEntity(redeliveryId,
                     new TdsMeasurement(command.sessionId(), original.getSeq(), original.getElapsedMs(),
-                            original.getTdsPpm(), original.isWarmup(), original.getRawVoltageMv()),
+                            original.getTdsPpm(), original.isWarmup(), original.getRawVoltageMv(), original.getTemperatureC(), original.getTemperatureElapsedMs()),
                     new TdsMeasurement(command.sessionId(), incoming.seq(), incoming.elapsedMs(),
-                            incoming.tdsPpm(), incoming.isWarmup(), incoming.rawVoltageMv()));
+                            incoming.tdsPpm(), incoming.isWarmup(), incoming.rawVoltageMv(), incoming.temperatureC(), incoming.temperatureElapsedMs()));
         }).toList();
         int identical = (int) details.stream()
                 .filter(d -> d.getComparisonResult() == TdsMeasurementComparisonResult.IDENTICAL).count();

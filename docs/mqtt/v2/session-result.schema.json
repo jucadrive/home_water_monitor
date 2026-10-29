@@ -1,0 +1,137 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:home-water-monitor:mqtt:v2:session-result",
+  "title": "SESSION_RESULT v2 with temperature provenance",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "eventType",
+    "deviceId",
+    "sessionId",
+    "startedAt",
+    "expectedSamples",
+    "samplingIntervalMs",
+    "calibrationVersion",
+    "measurements",
+    "temperatureSource",
+    "compensationVersion"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 2
+    },
+    "eventType": {
+      "const": "SESSION_RESULT"
+    },
+    "deviceId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"
+    },
+    "sessionId": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+    },
+    "startedAt": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,9})?Z$"
+        }
+      ]
+    },
+    "expectedSamples": {
+      "type": "integer",
+      "const": 60
+    },
+    "samplingIntervalMs": {
+      "type": "integer",
+      "const": 1000
+    },
+    "calibrationVersion": {
+      "enum": [
+        "sen0244-uncalibrated-v1",
+        "simulated-v1"
+      ]
+    },
+    "measurements": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 60,
+      "items": {
+        "$ref": "#/$defs/measurement"
+      }
+    },
+    "temperatureSource": {
+      "enum": [
+        "DS18B20",
+        "SIMULATED"
+      ]
+    },
+    "compensationVersion": {
+      "const": "sen0244-voltage-atc-v1"
+    }
+  },
+  "$defs": {
+    "measurement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "seq",
+        "elapsedMs",
+        "tdsPpm",
+        "isWarmup",
+        "rawVoltageMv",
+        "temperatureC",
+        "temperatureElapsedMs"
+      ],
+      "properties": {
+        "seq": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 60
+        },
+        "elapsedMs": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2147483647
+        },
+        "tdsPpm": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1000,
+          "multipleOf": 0.01
+        },
+        "isWarmup": {
+          "type": "boolean"
+        },
+        "rawVoltageMv": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 2300,
+          "multipleOf": 0.01
+        },
+        "temperatureC": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 50,
+          "multipleOf": 0.0001
+        },
+        "temperatureElapsedMs": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2147483647
+        }
+      }
+    },
+    "measurementNumber": {
+      "type": "number",
+      "exclusiveMinimum": -10000000,
+      "exclusiveMaximum": 10000000,
+      "multipleOf": 0.01
+    }
+  }
+}

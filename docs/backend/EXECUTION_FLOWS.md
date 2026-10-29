@@ -266,3 +266,26 @@ ControlRuntime.dispatch
 ## 8. 읽은 경로를 스스로 검증하기
 
 각 기능에서 여섯 항목을 기록한다: **입력/키 → 실행 스레드 → 프록시/트랜잭션 → 변경 데이터 → 성공 종료점 → 실패 종료점**. 이어서 ‘이 줄을 없애면 어떤 불변식이 깨지는가’와 ‘그 사실을 확인하는 테스트는 무엇인가’를 답한다. [실습 문서](VERIFICATION_WORKBOOK.md)의 반복 가능한 절차로 확인한다.
+
+## 9. 수온 보정 v2의 추가 흐름
+
+기존1~8의 경계는 유지한다. 상세 계약은 [v2](../mqtt/v2/README.md), 계산/실물 한계는 [수온 안내](../TEMPERATURE_SETUP.md)를 따른다.
+
+1. 장치는 반올림 전 중앙값 전압과 완료된 온도 변환을 사용해 보정하고 원본을 확정한다. 보정 전 전압·온도·온도시점·공식 버전을 함께 보내 재시도 때 재계산하지 않는다. 온도 보정은 교정이 아니므로 미교정 표식도 유지한다.
+2. `SessionMqttConfiguration.mqttInbound`는 허용 장치의 v1/v2 결과 토픽을 모두 구독한다. `MqttSessionCodec.decode`는 schemaVersion과 토픽을 함께 확인하고 버전별 정확한 필드 집합을 검사한다. `TdsSessionInputValidator`→`TemperatureInput.validate`가 v1의 가정 수온과 v2의 실측/모의 출처·공식·시점(원본 이전2000ms 이내) 조합을 구분한다.
+3. `ProcessTdsSessionService.process` 이하 기존 트랜잭션 경로가 세션·원본·통계를 함께 저장한다. 새 V9는 기존 열의 값을 변경하지 않고 nullable 확장 열과 조건부 제약을 추가한다. 새 필드도 같은 서비스 트랜잭션에 포함되며 MANDATORY/persist 경로를 유지한다.
+4. 재수신은 `TdsSessionMetadataValidator`에서 온도 출처/공식까지 고정하고, `TdsMeasurement.compareWith`가 v1 네 필드 및 v2 온도/온도시점을 비교한다. `TdsMeasurementSnapshot`에는 비교 당시 두 온도 근거도 남기며 원본을 덮어쓰지 않는다. 수치 비교는 compareTo다.
+5. 실제 커밋 후 `MqttSessionReceiver`가 입력과 같은 버전의 preservation 토픽으로 확인을 보낸다. 커밋 실패·입력 실패는 보존 확인 없이 종료한다. 장치의 수신 parser도 설정한 버전만 수용한다.
+6. `MeasurementQueryStore`는 원본에서 안정화 제외 평균 수온을 조회하고, 모의 온도를 실제 TDS 추세에서 제외한다. `MeasurementQueryService.detail`은 원본 온도/시점도 반환한다. Android는 온도 출처·보정 버전·기존 가정 기록을 구분하고, 추세에 두 온도 기준이 함께 있으면 이를 표시한다.
+
+검증할 질문: TDS값이 같아도 온도가 달라지면 왜 충돌인가? v1과 v2의 같은 sessionId를 왜 합칠 수 없는가? 저장 건수가 같다는 확인만으로 장치 데이터를 지워도 되는 시점은 언제인가? 서버가 수온을 재보정하면 어떤 오류가 생기는가? `TemperatureMqttTest`·`TemperatureMqttIntegrationTest`에서 답을 확인한다. 실제 DS18B20 정확도는 이 서버 시험의 증거 범위 밖이다.
+
+## 10. 매시간 서버 자동 START
+
+1. 설정 enabled=true일 때만 AutomaticMeasurementConfiguration이 명시 장비와 실제 존재하는 재배를 확인하고 Job을 등록한다. 기본 OFF면 자동 타이머는 없다. HourlyMeasurementJob.run의 UTC cron은 매 정각이며 시작 즉시 호출하지 않는다.
+2. AutomaticMeasurementService.runAt은 시작 시점과 현재 정각/60초 허용 범위를 HourlyMeasurementSlot으로 검사한다. 지난 회차를 반복하는 루프는 없다. 이전 CLAIMED 정리 후 AutomaticMeasurementRunStore.claim의 REQUIRES_NEW 트랜잭션이 회차 유일 키를 확보한다. 프록시에서 실제 커밋이 끝난 뒤에만 서비스로 돌아온다.
+3. 확보에 실패한 경쟁 호출은 종료한다. 성공한 호출은 새 UUID v4 키와 설정한 재배 ID로 ControlRuntime.submit(... START ...)을 호출한다. 기존 CommandTransactionService의 활성 재배 잠금·장비 잠금/버퍼·멱등성·실제 probe/dispatch 경로가 그대로 동작한다. 수동 측정도 같은 장비 잠금을 사용한다.
+4. 수락 전 BUSY/종료 재배 등은 SKIPPED, 불확실한 예외는 UNKNOWN으로 기록한다. SUBMITTED는 제어 요청 생성 상태다. 실제 오프라인/센서 준비 실패·ACCEPTED·보존/해제는 기존 명령과 세션을 조인해 확인한다. 최종 회차 기록 갱신도 별도 트랜잭션이다.
+5. claim 커밋 이후 중단되면 같은 회차를 다시 보내지 않는다. 다음 정각에 명령이 있으면 SUBMITTED로 연결하고, 없으면 UNKNOWN/PROCESS_INTERRUPTED로 정리한다. DB 기록조차 실패한 callback은 예외 종류만 로그에 남기며 즉시 재시도하지 않는다. 서버가 꺼져 있던 회차는 생성하지 않는다.
+
+검증할 질문: 왜 claim과 MQTT를 하나의 트랜잭션으로 묶지 않는가? claim 직후 중단과 명령 생성 직후 중단을 어떻게 구분하는가? 자동 SUBMITTED가 원본 저장을 입증하지 못하는 이유는 무엇인가? 수동 버튼이 자동 회차와 경합하면 어떤 잠금이 결정하는가?

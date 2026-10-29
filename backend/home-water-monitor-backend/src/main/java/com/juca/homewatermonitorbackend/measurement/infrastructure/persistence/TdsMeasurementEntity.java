@@ -41,6 +41,17 @@ public class TdsMeasurementEntity {
     @Column(name = "raw_voltage_mv", precision = 9, scale = 2)
     private BigDecimal rawVoltageMv;
 
+    @Column(name = "temperature_c", precision = 7, scale = 4)
+    private BigDecimal temperatureC;
+    @Column(name = "temperature_elapsed_ms")
+    private Integer temperatureElapsedMs;
+
+    public TdsMeasurementEntity(UUID sessionId, int seq, int elapsedMs, BigDecimal tdsPpm, boolean isWarmup,
+            BigDecimal rawVoltageMv, BigDecimal temperatureC, Integer temperatureElapsedMs) {
+        this(sessionId, seq, elapsedMs, tdsPpm, isWarmup, rawVoltageMv);
+        this.temperatureC = temperatureC;
+        this.temperatureElapsedMs = temperatureElapsedMs;
+    }
     // JPA가 엔티티를 생성할 때 사용
     protected TdsMeasurementEntity() {
 

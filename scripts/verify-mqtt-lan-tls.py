@@ -156,6 +156,14 @@ try:
     assert publish("device", topic + "commands") >= 128
     assert publish("server", topic + "status") >= 128
     passed("existing directional ACL enforced over TLS")
+    topic_v2 = "home/water/v2/esp32-bench/"
+    assert publish("device", topic_v2 + "events") < 128
+    assert publish("server", topic_v2 + "preservation") < 128
+    assert publish("device", topic_v2 + "preservation") >= 128
+    assert publish("server", topic_v2 + "events") >= 128
+    assert publish("device", topic_v2 + "commands") >= 128
+    assert publish("device", "home/water/v2/another-device/events") >= 128
+    passed("v2 result/preservation ACL allowed only in the approved direction and device")
     success = True
 finally:
     cleanup = compose("down", "--volumes", "--remove-orphans", check=False)

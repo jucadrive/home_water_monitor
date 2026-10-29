@@ -47,6 +47,11 @@ class MqttSetupTest(unittest.TestCase):
         self.assertIn("topic write home/water/v1/esp32-bench/commands", server)
         self.assertIn("topic write home/water/v1/esp32-bench/events", device)
         self.assertIn("topic read home/water/v1/esp32-bench/commands", device)
+        self.assertIn("topic read home/water/v2/esp32-bench/events", server)
+        self.assertIn("topic write home/water/v2/esp32-bench/preservation", server)
+        self.assertIn("topic write home/water/v2/esp32-bench/events", device)
+        self.assertIn("topic read home/water/v2/esp32-bench/preservation", device)
+        self.assertNotIn("home/water/v2/esp32-bench/commands", text)
 
     def test_passwords_use_stdin_and_hash_file_contains_no_plaintext(self):
         with tempfile.TemporaryDirectory() as folder:

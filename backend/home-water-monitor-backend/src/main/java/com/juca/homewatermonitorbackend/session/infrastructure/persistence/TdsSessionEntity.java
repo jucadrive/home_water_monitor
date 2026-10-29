@@ -57,7 +57,7 @@ public class TdsSessionEntity {
     // 실제 측정 온도가 아닌 계산에 사용한 가정 온도
     @Column(
             name = "temperature_assumed_c",
-            nullable = false,
+            nullable = true,
             precision = 5,
             scale = 2
     )
@@ -82,6 +82,20 @@ public class TdsSessionEntity {
     // 통계 대상 원본의 중앙값
     @Column(name = "median_tds_ppm", precision = 9, scale = 2)
     private BigDecimal medianTdsPpm;
+
+    @Column(name = "temperature_source", length = 16)
+    private String temperatureSource;
+    @Column(name = "compensation_version", length = 64)
+    private String compensationVersion;
+
+    public TdsSessionEntity(UUID sessionId, String deviceId, Instant startedAt, Instant ingestedAt, int expectedSampleCount, int samplingIntervalMs, int preservedSampleCount, int statsSampleCount, String preservationResult, BigDecimal temperatureAssumedC, String calibrationVersion, BigDecimal minTdsPpm, BigDecimal maxTdsPpm, BigDecimal avgTdsPpm, BigDecimal medianTdsPpm) {
+        this(sessionId, deviceId, startedAt, ingestedAt, expectedSampleCount, samplingIntervalMs, preservedSampleCount,
+            statsSampleCount, preservationResult, temperatureAssumedC, calibrationVersion, minTdsPpm, maxTdsPpm,
+            avgTdsPpm, medianTdsPpm, null, null);
+    }
+    public TdsSessionEntity temperatureContext(String source, String version) {
+        this.temperatureSource = source; this.compensationVersion = version; return this;
+    }
 
     protected TdsSessionEntity() {
 

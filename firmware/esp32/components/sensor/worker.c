@@ -1,12 +1,13 @@
 #include "worker.h"
+#include "temperature_runtime.h"
 #include "esp_timer.h"
 #include <string.h>
 
 static uint64_t clock_ms(void) { return esp_timer_get_time() / 1000; }
 const char *hwm_worker_error_name(hwm_worker_error error)
 {
-    static const char *names[] = {"none", "late", "adc_read", "adc_range", "conversion", "state", "queue"};
-    return (unsigned)error <= HWM_WORKER_QUEUE ? names[error] : "state";
+    static const char *names[] = {"none", "late", "adc_read", "adc_range", "conversion", "state", "queue", "temperature"};
+    return (unsigned)error <= HWM_WORKER_TEMPERATURE ? names[error] : "state";
 }
 static hwm_worker_error acquisition_error(const char *reason)
 {
@@ -21,11 +22,18 @@ static void acquire(hwm_sensor_worker *w, const hwm_worker_request *request)
     for (unsigned seq = 1; seq <= request->target;) {
         if (atomic_load(&w->cancelled_generation) == request->generation) return;
         hwm_worker_result result = {.generation = request->generation, .seq = seq};
-        hwm_sensor_result state = hwm_sensor_poll(&acquisition, clock_ms(), w->read, w->context, &result.value);
+        hwm_sensor_result state = (w->temperature_enabled ? hwm_sensor_poll_temperature : hwm_sensor_poll)(&acquisition, clock_ms(), w->read, w->context, &result.value);
         result.at_ms = clock_ms();
         if (state == HWM_SENSOR_PENDING) { vTaskDelay(1); continue; }
+        if (state == HWM_SENSOR_SAMPLE && w->temperature_enabled
+            && (!hwm_temperature_latest(&result.temperature)
+                || !hwm_temperature_valid(&result.temperature, result.at_ms, request->started_ms)
+                || !hwm_tds_compensate(&result.value, result.temperature.ten_thousandths))) {
+            result.error = HWM_WORKER_TEMPERATURE;
+            state = HWM_SENSOR_ERROR;
+        }
         result.window_count = acquisition.count;
-        if (state == HWM_SENSOR_ERROR) result.error = acquisition_error(acquisition.failure_reason);
+        if (state == HWM_SENSOR_ERROR && result.error == HWM_WORKER_OK) result.error = acquisition_error(acquisition.failure_reason);
         /* A full queue terminates this job. A separate atomic signal cannot be lost in that same full queue. */
         if (xQueueSend(w->results, &result, 0) != pdTRUE) {
             atomic_store(&w->failed_generation, request->generation);

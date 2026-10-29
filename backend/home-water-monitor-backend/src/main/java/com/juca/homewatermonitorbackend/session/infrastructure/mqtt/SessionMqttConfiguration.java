@@ -68,12 +68,12 @@ public class SessionMqttConfiguration {
 
     @Bean
     Mqttv5PahoMessageDrivenChannelAdapter mqttInbound(SessionMqttProperties config, DirectChannel mqttSessionInput) {
-        var subscriptions = config.allowedDeviceIds().stream().sorted().map(id -> {
-            var subscription = new MqttSubscription("home/water/v1/" + id + "/events", 1);
+        var subscriptions = config.allowedDeviceIds().stream().sorted().flatMap(id -> java.util.stream.Stream.of(1, 2).map(version -> {
+            var subscription = new MqttSubscription("home/water/v" + version + "/" + id + "/events", 1);
             subscription.setRetainAsPublished(true);
             subscription.setRetainHandling(2);
             return subscription;
-        }).toArray(MqttSubscription[]::new);
+        })).toArray(MqttSubscription[]::new);
         var adapter = new Mqttv5PahoMessageDrivenChannelAdapter(options(config, true), config.inboundClientId(), subscriptions);
         adapter.setPersistence(new MemoryPersistence());
         adapter.setPayloadType(MqttMessage.class);

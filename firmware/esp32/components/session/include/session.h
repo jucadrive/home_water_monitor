@@ -21,6 +21,8 @@ typedef struct {
     int32_t tds_hundredths;
     bool warmup;
     int32_t voltage_hundredths;
+    int32_t temperature_ten_thousandths;
+    uint32_t temperature_elapsed_ms;
 } hwm_sample;
 typedef struct {
     char device_id[65], session_id[37];
@@ -36,6 +38,7 @@ typedef struct {
     int msg_id;
     uint64_t started_ms, deadline_ms;
     bool finalized, real_sensor;
+    unsigned temperature_mode;
     size_t payload_len;
     char payload[HWM_MAX_PAYLOAD + 1];
 } hwm_session;
@@ -44,6 +47,9 @@ bool hwm_init(hwm_session *s, const char *device_id);
 bool hwm_start(hwm_session *s, const char *uuid, unsigned target, uint64_t now);
 /* Source is selected only while idle; frozen metadata follows the retained payload. */
 bool hwm_set_real_sensor(hwm_session *s, bool real);
+bool hwm_set_temperature_mode(hwm_session *s, unsigned mode);
+bool hwm_sample_append_temperature(hwm_session *s, uint64_t measured_ms, uint64_t processed_ms,
+    int32_t tds, int32_t voltage, int32_t temperature, uint64_t temperature_ms);
 bool hwm_sample_append(hwm_session *s, uint64_t now, int32_t tds_hundredths, int32_t voltage_hundredths);
 /* A delayed consumer preserves acquisition time but starts transmission deadlines at processing time. */
 bool hwm_sample_append_observed(hwm_session *s, uint64_t measured_ms, uint64_t processed_ms,
@@ -61,5 +67,6 @@ bool hwm_confirmation_matches(const hwm_session *s, const hwm_confirmation *conf
 bool hwm_release(hwm_session *s, const hwm_confirmation *confirmation);
 size_t hwm_serialize(const hwm_session *s, char *out, size_t capacity);
 bool hwm_parse_confirmation(const char *json, size_t length, hwm_confirmation *out);
+bool hwm_parse_confirmation_version(const char *json, size_t length, hwm_confirmation *out, unsigned version);
 const char *hwm_state_name(hwm_state state);
 #endif

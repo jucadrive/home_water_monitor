@@ -70,22 +70,38 @@ bool hwm_set_real_sensor(hwm_session *s, bool real)
     s->real_sensor = real;
     return true;
 }
+bool hwm_set_temperature_mode(hwm_session *s, unsigned mode)
+{
+    if (!s || s->state != HWM_IDLE || mode > 2) return false;
+    s->temperature_mode = mode; return true;
+}
 bool hwm_sample_append(hwm_session *s, uint64_t now, int32_t tds, int32_t voltage)
 {
     return hwm_sample_append_observed(s, now, now, tds, voltage);
 }
-bool hwm_sample_append_observed(hwm_session *s, uint64_t now, uint64_t processed, int32_t tds, int32_t voltage)
+static bool append_sample(hwm_session *s, uint64_t now, uint64_t processed, int32_t tds, int32_t voltage,
+    bool has_temperature, int32_t temperature, uint64_t temperature_ms)
 {
     if (!s || processed < now || s->state != HWM_MEASURING || now < s->deadline_ms || now < s->started_ms
         || now - s->started_ms > INT32_MAX || s->count >= s->target
         || tds < 0 || tds > 100000 || voltage < 0 || voltage > 230000) return false;
+    if ((s->temperature_mode != 0) != has_temperature) return false;
+    if (has_temperature && (temperature < 0 || temperature > 500000 || temperature_ms < s->started_ms
+        || temperature_ms > now || now - temperature_ms > 2000)) return false;
     unsigned i = s->count;
     s->samples[i] = (hwm_sample){ .seq = i + 1, .elapsed_ms = (uint32_t)(now - s->started_ms),
-        .tds_hundredths = tds, .warmup = i < 10, .voltage_hundredths = voltage };
+        .tds_hundredths = tds, .warmup = i < 10, .voltage_hundredths = voltage,
+        .temperature_ten_thousandths = temperature,
+        .temperature_elapsed_ms = has_temperature ? (uint32_t)(temperature_ms - s->started_ms) : 0 };
     s->count++;
     s->deadline_ms = now + 1000;
     return s->count != s->target || finalize(s, processed);
 }
+bool hwm_sample_append_observed(hwm_session *s, uint64_t now, uint64_t processed, int32_t tds, int32_t voltage)
+{ return append_sample(s, now, processed, tds, voltage, false, 0, 0); }
+bool hwm_sample_append_temperature(hwm_session *s, uint64_t now, uint64_t processed, int32_t tds, int32_t voltage,
+    int32_t temperature, uint64_t temperature_ms)
+{ return append_sample(s, now, processed, tds, voltage, true, temperature, temperature_ms); }
 bool hwm_sample_simulated(hwm_session *s, uint64_t now)
 {
     if (!s || s->real_sensor) return false;
@@ -191,18 +207,26 @@ size_t hwm_serialize(const hwm_session *s, char *out, size_t capacity)
 {
     if (!s || !out || !capacity || s->count > 60) return 0;
     size_t used = 0;
-    if (!append(out, capacity, &used, "{\"schemaVersion\":1,\"eventType\":\"SESSION_RESULT\",\"deviceId\":\"%s\",\"sessionId\":\"%s\","
-        "\"startedAt\":null,\"expectedSamples\":60,\"samplingIntervalMs\":1000,\"temperatureAssumedC\":25.00,"
-        "\"calibrationVersion\":\"%s\",\"measurements\":[", s->device_id, s->session_id,
+    if (!append(out, capacity, &used, "{\"schemaVersion\":%u,\"eventType\":\"SESSION_RESULT\",\"deviceId\":\"%s\",\"sessionId\":\"%s\","
+        "\"startedAt\":null,\"expectedSamples\":60,\"samplingIntervalMs\":1000,", s->temperature_mode ? 2 : 1, s->device_id, s->session_id)) return 0;
+    if (s->temperature_mode) {
+        if (!append(out, capacity, &used, "\"temperatureSource\":\"%s\",\"compensationVersion\":\"sen0244-voltage-atc-v1\",",
+            s->temperature_mode == 2 ? "DS18B20" : "SIMULATED")) return 0;
+    } else if (!append(out, capacity, &used, "\"temperatureAssumedC\":25.00,")) return 0;
+    if (!append(out, capacity, &used, "\"calibrationVersion\":\"%s\",\"measurements\":[",
         s->real_sensor ? "sen0244-uncalibrated-v1" : "simulated-v1")) return 0;
     for (unsigned i = 0; i < s->count; i++) {
         const hwm_sample *m = &s->samples[i];
         /* Wire values are frozen nonnegative hundredths; retries never recalculate them. */
         if (m->tds_hundredths < 0 || m->voltage_hundredths < 0) return 0;
-        if (!append(out, capacity, &used, "%s{\"seq\":%u,\"elapsedMs\":%lu,\"tdsPpm\":%ld.%02ld,\"isWarmup\":%s,\"rawVoltageMv\":%ld.%02ld}",
+        if (!append(out, capacity, &used, "%s{\"seq\":%u,\"elapsedMs\":%lu,\"tdsPpm\":%ld.%02ld,\"isWarmup\":%s,\"rawVoltageMv\":%ld.%02ld",
             i ? "," : "", m->seq, (unsigned long)m->elapsed_ms, (long)(m->tds_hundredths / 100),
             (long)(m->tds_hundredths % 100), m->warmup ? "true" : "false", (long)(m->voltage_hundredths / 100),
             (long)(m->voltage_hundredths % 100))) return 0;
+        if (s->temperature_mode && !append(out, capacity, &used, ",\"temperatureC\":%ld.%04ld,\"temperatureElapsedMs\":%lu",
+            (long)(m->temperature_ten_thousandths / 10000), (long)(m->temperature_ten_thousandths % 10000),
+            (unsigned long)m->temperature_elapsed_ms)) return 0;
+        if (!append(out, capacity, &used, "}")) return 0;
     }
     return append(out, capacity, &used, "]}") && used <= HWM_MAX_PAYLOAD ? used : 0;
 }

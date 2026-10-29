@@ -36,9 +36,9 @@ public class SaveIncompleteTdsSessionService {
         }
         sessions.insert(new TdsSessionEntity(command.sessionId(), command.deviceId(), command.startedAt(), Instant.now(),
                 60, command.samplingIntervalMs(), command.measurements().size(), 0, "INCOMPLETE",
-                command.temperatureAssumedC(), command.calibrationVersion(), null, null, null, null));
+                command.temperatureAssumedC(), command.calibrationVersion(), null, null, null, null).temperatureContext(command.temperatureSource(), command.compensationVersion()));
         measurements.saveAll(command.measurements().stream().map(m -> new TdsMeasurementEntity(command.sessionId(),
-                m.seq(), m.elapsedMs(), m.tdsPpm(), m.isWarmup(), m.rawVoltageMv())).toList());
+                m.seq(), m.elapsedMs(), m.tdsPpm(), m.isWarmup(), m.rawVoltageMv(), m.temperatureC(), m.temperatureElapsedMs())).toList());
         var present = command.measurements().stream().map(SaveNormalTdsSessionCommand.Measurement::seq)
                 .collect(Collectors.toSet());
         missing.insert(command.sessionId(), IntStream.rangeClosed(1, 60).filter(seq -> !present.contains(seq))

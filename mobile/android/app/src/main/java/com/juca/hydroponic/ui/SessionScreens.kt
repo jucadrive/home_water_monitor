@@ -38,16 +38,11 @@ import com.juca.hydroponic.data.SessionDetail
                     Text(date(s.displayAt), style = MaterialTheme.typography.bodyMedium)
                     Text(basis(s.timeBasis), style = MaterialTheme.typography.bodySmall, color = Muted)
                     HorizontalDivider()
-                    Text(when (s.source) {
-                        "ADS1115" -> "센서 실측 · ADS1115"
-                        "SIMULATED" -> "가상 측정 · 실측 아님"
-                        else -> "측정 출처: ${s.source}"
-                    }, style = MaterialTheme.typography.labelLarge)
+                    if (s.source != "ADS1115") Text(
+                        if (s.source == "SIMULATED") "가상 측정 · 실측 아님" else "측정 출처: ${s.source}",
+                        style = MaterialTheme.typography.labelLarge)
                     Text("원본 ${s.preservedSampleCount}/60 · 통계 ${s.statsSampleCount}개", style = MaterialTheme.typography.bodySmall)
-                    Text(if (s.calibrationVersion == "sen0244-uncalibrated-v1") "미교정 측정" else "교정 정보는 상세 정보에서 확인하세요.",
-                        style = MaterialTheme.typography.bodySmall, color = Muted)
-                    Text(s.temperatureAssumedC?.let { "${it.stripTrailingZeros().toPlainString()}°C 가정 · 실측 수온 아님" } ?: "가정 수온 기록 없음 · 실측 수온 아님",
-                        style = MaterialTheme.typography.bodySmall, color = Muted)
+                    Text(temperatureLabel(s), style = MaterialTheme.typography.bodySmall, color = Muted)
                 }
             }
         }
@@ -65,7 +60,12 @@ import com.juca.hydroponic.data.SessionDetail
                         SessionFact("최대", ppm(s.maxTdsPpm))
                     }
                     SessionFact("측정 장치", s.deviceId)
+                    SessionFact("측정 출처", s.source)
+                    if (s.calibrationVersion == "sen0244-uncalibrated-v1") SessionFact("교정 상태", "TDS 미교정")
+                    compensationLabel(s)?.let { SessionFact("온도 보정", it) }
                     SessionFact("교정 버전", s.calibrationVersion)
+                    s.temperatureSource?.let { SessionFact("온도 출처", it) }
+                    s.compensationVersion?.let { SessionFact("보정 공식 버전", it) }
                     SessionFact("세션 ID", s.sessionId)
                 }
             }
@@ -81,6 +81,8 @@ import com.juca.hydroponic.data.SessionDetail
                 Text("#${m.seq} · ${m.elapsedMs} ms · ${ppm(m.tdsPpm)}")
                 Text(if (m.isWarmup) "안정화 원본 · 통계 제외" else "통계 대상 원본", style = MaterialTheme.typography.bodySmall)
                 Text(m.rawVoltageMv?.toPlainString()?.plus(" mV") ?: "전압 기록 없음", style = MaterialTheme.typography.bodySmall)
+                m.temperatureC?.let { Text("수온 ${degrees(it)} · 관측 차 ${m.temperatureElapsedMs?.let { at -> "${m.elapsedMs - at} ms" } ?: "미상"}",
+                    style = MaterialTheme.typography.bodySmall) }
             } }
         }
     }

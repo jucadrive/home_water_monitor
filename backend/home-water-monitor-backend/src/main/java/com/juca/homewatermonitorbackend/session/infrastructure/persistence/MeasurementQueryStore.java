@@ -14,7 +14,8 @@ public class MeasurementQueryStore {
     private final JdbcTemplate jdbc;
     public MeasurementQueryStore(JdbcTemplate jdbc) { this.jdbc=jdbc; }
     private static final String SELECT="""
-            select s.*,c.cultivation_id,c.requested_at from tds_session s
+            select s.*,c.cultivation_id,c.requested_at,
+            (select avg(m.temperature_c) from tds_measurement m where m.session_id=s.session_id and not m.is_warmup) as average_temperature_c from tds_session s
             left join tds_device_command c on c.session_id=s.session_id and c.device_id=s.device_id and c.command_type='START'
             """;
     public List<MeasurementSessionView> list(UUID cultivation,boolean unlinked,boolean normal,boolean realOnly,int limit,int offset) {
@@ -22,7 +23,7 @@ public class MeasurementQueryStore {
         if(cultivation!=null){sql+=" and c.cultivation_id=?";args.add(cultivation);}
         if(unlinked)sql+=" and c.cultivation_id is null";
         if(normal)sql+=" and s.preservation_result='NORMAL'";
-        if(realOnly)sql+=" and s.calibration_version='sen0244-uncalibrated-v1'";
+        if(realOnly)sql+=" and s.calibration_version='sen0244-uncalibrated-v1' and (s.temperature_source is null or s.temperature_source='DS18B20')";
         sql+=" order by coalesce(s.started_at,c.requested_at,s.ingested_at) desc,s.session_id limit ? offset ?";
         args.add(limit);args.add(offset);return jdbc.query(sql,mapper(),args.toArray());
     }
@@ -43,7 +44,7 @@ public class MeasurementQueryStore {
                     start!=null?"MEASURED":requested!=null?"REQUESTED":"INGESTED",r.getString("preservation_result"),
                     r.getInt("preserved_sample_count"),r.getInt("stats_sample_count"),r.getBigDecimal("min_tds_ppm"),
                     r.getBigDecimal("max_tds_ppm"),r.getBigDecimal("avg_tds_ppm"),r.getBigDecimal("median_tds_ppm"),
-                    r.getBigDecimal("temperature_assumed_c"),version,source);
+                    r.getBigDecimal("temperature_assumed_c"),version,source,r.getString("temperature_source"),r.getString("compensation_version"),r.getBigDecimal("average_temperature_c"));
         };
     }
 }

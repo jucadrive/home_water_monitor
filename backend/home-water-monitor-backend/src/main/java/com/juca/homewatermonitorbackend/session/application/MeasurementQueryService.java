@@ -14,7 +14,7 @@ public class MeasurementQueryService {
     private final MeasurementQueryStore store;
     private final TdsMeasurementJpaRepository samples;
     public MeasurementQueryService(MeasurementQueryStore store,TdsMeasurementJpaRepository samples) { this.store=store;this.samples=samples; }
-    public record Sample(int seq,int elapsedMs,BigDecimal tdsPpm,boolean isWarmup,BigDecimal rawVoltageMv) { }
+    public record Sample(int seq,int elapsedMs,BigDecimal tdsPpm,boolean isWarmup,BigDecimal rawVoltageMv,BigDecimal temperatureC,Integer temperatureElapsedMs) { }
     public record Detail(MeasurementSessionView session,List<Sample> measurements) { }
     public List<MeasurementSessionView> list(UUID cultivation,boolean unlinked,boolean trend,int limit,int offset) {
         if(limit<1 || limit>200 || offset<0)throw new IllegalArgumentException();
@@ -27,6 +27,6 @@ public class MeasurementQueryService {
     public Detail detail(UUID id) {
         var session=store.get(id);if(session==null)throw new ControlException(404,"SESSION_NOT_FOUND");
         return new Detail(session,samples.findBySessionIdOrderBySeqAsc(id).stream().map(m->
-                new Sample(m.getSeq(),m.getElapsedMs(),m.getTdsPpm(),m.isWarmup(),m.getRawVoltageMv())).toList());
+                new Sample(m.getSeq(),m.getElapsedMs(),m.getTdsPpm(),m.isWarmup(),m.getRawVoltageMv(),m.getTemperatureC(),m.getTemperatureElapsedMs())).toList());
     }
 }

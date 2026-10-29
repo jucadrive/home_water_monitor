@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 2,
+  "eventType": "SESSION_RESULT",
+  "deviceId": "esp32-water-01",
+  "sessionId": "145abec7-dc82-4ca1-9ced-1f976694a340",
+  "startedAt": null,
+  "expectedSamples": 60,
+  "samplingIntervalMs": 1000,
+  "calibrationVersion": "simulated-v1",
+  "measurements": [],
+  "temperatureSource": "SIMULATED",
+  "compensationVersion": "sen0244-voltage-atc-v1"
+}

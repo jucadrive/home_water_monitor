@@ -86,12 +86,12 @@ public class SaveNormalTdsSessionService {
                         measurement.elapsedMs(),
                         measurement.tdsPpm(),
                         measurement.isWarmup(),
-                        measurement.rawVoltageMv()
+                        measurement.rawVoltageMv(), measurement.temperatureC(), measurement.temperatureElapsedMs()
                 ))
                 .toList();
 
         // 세션을 먼저 등록하고, 이를 참조하는 원본을 같은 트랜잭션에서 저장
-        sessionPersistenceAdapter.insert(session);
+        sessionPersistenceAdapter.insert(session.temperatureContext(command.temperatureSource(), command.compensationVersion()));
         measurementJpaRepository.saveAll(measurements);
 
         // 실제 커밋은 이 메서드를 감싸는 Spring 트랜잭션 경계에서 수행

@@ -16,7 +16,7 @@ import com.juca.hydroponic.data.*
 import java.time.Instant
 
 @Composable fun TrendChart(sessions: List<SessionSummary>, maintenance: List<Maintenance>) {
-    val data = sessions.filter { it.source == "ADS1115" && it.preservationResult == "NORMAL" && it.medianTdsPpm != null }.sortedBy { Instant.parse(it.displayAt) }
+    val data = sessions.filter { it.eligibleForRealTrend() }.sortedBy { Instant.parse(it.displayAt) }
     val color = MaterialTheme.colorScheme.primary
     val marker = MaterialTheme.colorScheme.tertiary
     Card(Modifier.fillMaxWidth()) {
@@ -27,6 +27,13 @@ import java.time.Instant
                 Text("기록이 자라는 중이에요", style = MaterialTheme.typography.titleLarge)
                 Text("실측 정상 기록이 쌓이면 추세를 보여드립니다.", color = Muted)
             } else {
+                val assumed = data.any { it.temperatureSource == null }
+                val measured = data.any { it.temperatureSource == "DS18B20" }
+                Text(when {
+                    assumed && measured -> "수온 기준: 가정 수온 · 실측 수온 보정 기록"
+                    measured -> "수온 기준: 실측 수온 보정 기록"
+                    else -> "수온 기준: 가정 수온 기록"
+                }, style = MaterialTheme.typography.bodySmall, color = Muted)
                 val low = data.minOf { it.medianTdsPpm!!.toDouble() }
                 val high = data.maxOf { it.medianTdsPpm!!.toDouble() }
                 val first = Instant.parse(data.first().displayAt).toEpochMilli()

@@ -39,8 +39,10 @@ class HydroponicMigrationIntegrationTest {
             var names=jdbc.queryForList("select column_name from information_schema.columns where table_schema='public' and table_name=? order by ordinal_position",String.class,table);
             columns.put(table,String.join(",",names));before.put(table,snapshot(jdbc,table,columns.get(table)));
         }
-        var upgraded=Flyway.configure().dataSource(source).load();assertEquals(3,upgraded.migrate().migrationsExecuted);upgraded.validate();
+        var upgraded=Flyway.configure().dataSource(source).load();assertEquals(5,upgraded.migrate().migrationsExecuted);upgraded.validate();
         for(String table:tables)assertEquals(before.get(table),snapshot(jdbc,table,columns.get(table)),table);
+        assertEquals(1,jdbc.queryForObject("select count(*) from tds_session where temperature_source is null and compensation_version is null and temperature_assumed_c=25",Integer.class));
+        assertEquals(1,jdbc.queryForObject("select count(*) from tds_measurement where temperature_c is null and temperature_elapsed_ms is null",Integer.class));
         assertEquals(0,jdbc.queryForObject("select count(*) from cultivation",Integer.class));
         assertEquals(1,jdbc.queryForObject("select count(*) from tds_device_command where cultivation_id is null",Integer.class));
         assertThrows(org.springframework.dao.DataIntegrityViolationException.class,()->jdbc.update(
