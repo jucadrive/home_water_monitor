@@ -21,7 +21,9 @@ class TemperatureScreensTest {
         compose.onNodeWithText("25°C 기준 온도 보정 · TDS 미교정").assertDoesNotExist()
         compose.onNodeWithText("TDS 미교정").assertDoesNotExist()
         compose.onNodeWithText("DS18B20").assertDoesNotExist()
-        compose.onNodeWithText("수온 26.06°C · 관측 차 100 ms").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("session-list").performScrollToNode(hasText("수온 26.06°C · 관측 차 100 ms"))
+        compose.onNodeWithText("수온 26.06°C · 관측 차 100 ms").assertIsDisplayed()
+        compose.onNodeWithTag("session-list").performScrollToNode(hasText("상세 정보 보기"))
         compose.onNodeWithText("상세 정보 보기").performScrollTo().performClick()
         compose.onNodeWithText("25°C 기준 온도 보정 · TDS 미교정").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("TDS 미교정").performScrollTo().assertIsDisplayed()
@@ -44,7 +46,7 @@ class TemperatureScreensTest {
     }
     @Test fun mixedLegacyAndCompensatedTrendIdentifiesBothTemperatureBases() {
         val legacy=summary().copy(sessionId="legacy",temperatureSource=null,compensationVersion=null,temperatureAssumedC=BigDecimal("25"))
-        compose.setContent { GardenTheme { TrendChart(listOf(legacy,summary()),emptyList()) } }
+        compose.setContent { GardenTheme { TrendChart(listOf(legacy,summary()),emptyList(),end=java.time.Instant.parse("2026-10-30T00:00:00Z")) } }
         compose.onNodeWithText("수온 기준: 가정 수온 · 실측 수온 보정 기록").assertIsDisplayed()
     }
 }

@@ -3,48 +3,61 @@ package com.juca.hydroponic.ui
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.Font
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.font.*
+import androidx.compose.ui.unit.*
 import com.juca.hydroponic.R
 
-val Forest = Color(0xFF285943)
-val Leaf = Color(0xFFDDEBD1)
-val Cream = Color(0xFFFAF9F2)
-val Muted = Color(0xFF526451)
-val NumberStyle = TextStyle(fontFamily = FontFamily.SansSerif, fontSize = 30.sp, lineHeight = 38.sp)
-private val Handwriting = FontFamily(Font(R.font.gamja_flower))
-private val Body = FontFamily(Font(R.font.gowun_dodum))
-private fun heading(size: Int) = TextStyle(fontFamily = Handwriting, fontSize = size.sp, lineHeight = (size + 5).sp)
-private fun body(size: Int) = TextStyle(fontFamily = Body, fontSize = size.sp, lineHeight = (size + 7).sp)
-
-@Composable fun GardenTheme(content: @Composable () -> Unit) {
-    MaterialTheme(
-        colorScheme = lightColorScheme(
-            primary = Forest, onPrimary = Color.White, primaryContainer = Leaf, onPrimaryContainer = Forest,
-            secondary = Color(0xFF566D45), onSecondary = Color.White,
-            secondaryContainer = Color(0xFFEAF0DE), onSecondaryContainer = Forest,
-            tertiary = Color(0xFF71602E), tertiaryContainer = Color(0xFFF7EDC9), onTertiaryContainer = Color(0xFF514316),
-            background = Cream, onBackground = Color(0xFF263C2C),
-            surface = Cream, onSurface = Color(0xFF263C2C),
-            surfaceVariant = Color(0xFFEEF2E6), onSurfaceVariant = Muted,
-            surfaceContainerLowest = Color.White, surfaceContainerLow = Color(0xFFF0F4E8),
-            surfaceContainer = Color(0xFFECF1E2), surfaceContainerHigh = Color(0xFFE4ECD9),
-            surfaceContainerHighest = Color(0xFFDCE7D1), outline = Color(0xFF74856B), outlineVariant = Color(0xFFD4DEC9),
-            error = Color(0xFF9B3730), errorContainer = Color(0xFFFFE8DE), onErrorContainer = Color(0xFF61221E)
-        ),
-        typography = Typography(
-            displayLarge = heading(48), displayMedium = heading(42), displaySmall = heading(38),
-            headlineLarge = heading(36), headlineMedium = heading(32), headlineSmall = heading(28),
-            titleLarge = heading(26), titleMedium = body(18), titleSmall = body(16),
-            bodyLarge = body(16), bodyMedium = body(15), bodySmall = body(13),
-            labelLarge = body(15), labelMedium = body(13), labelSmall = body(12)
-        ),
-        shapes = Shapes(extraSmall = RoundedCornerShape(12.dp), small = RoundedCornerShape(16.dp),
-            medium = RoundedCornerShape(22.dp), large = RoundedCornerShape(28.dp), extraLarge = RoundedCornerShape(32.dp)),
-        content = content
-    )
+object AquaPalette {
+    val Background=Color(0xFFF8FAF6)
+    val Primary=Color(0xFF286B56)
+    val Text=Color(0xFF193F35)
+    val Mint=Color(0xFFD7EEE6)
+    val Aqua=Color(0xFFB9E7E0)
+    val White=Color(0xFFFFFFFF)
+    val Muted=Color(0xFF4C6259)
+    val Outline=Color(0xFFD8E3DB)
+    val Soft=Color(0xFFEEF4EF)
+    val Amber=Color(0xFF76551F)
+    val AmberSurface=Color(0xFFF8EED8)
+    val Error=Color(0xFF9B3730)
+    val ErrorSurface=Color(0xFFFCEDE8)
+}
+object CareSpace {
+    val Screen=22.dp
+    val Card=22.dp
+    val Gap=16.dp
+    val Radius=24.dp
+}
+val Forest=AquaPalette.Primary
+val Leaf=AquaPalette.Mint
+val Cream=AquaPalette.Background
+val Muted=AquaPalette.Muted
+val BrandFont=FontFamily(Font(R.font.gamja_flower))
+val NumberStyle=TextStyle(fontFamily=FontFamily.SansSerif,fontWeight=FontWeight.SemiBold,
+    fontSize=42.sp,lineHeight=50.sp,letterSpacing=(-1).sp,fontFeatureSettings="tnum")
+private fun body(size:Int,weight:FontWeight=FontWeight.Normal)=TextStyle(
+    fontFamily=FontFamily.SansSerif,fontWeight=weight,fontSize=size.sp,lineHeight=(size+7).sp)
+@Composable fun GardenTheme(content:@Composable ()->Unit) {
+    MaterialTheme(colorScheme=lightColorScheme(
+        primary=Forest,onPrimary=AquaPalette.White,primaryContainer=Leaf,onPrimaryContainer=AquaPalette.Text,
+        secondary=Forest,onSecondary=AquaPalette.White,secondaryContainer=AquaPalette.Aqua,onSecondaryContainer=AquaPalette.Text,
+        tertiary=AquaPalette.Amber,tertiaryContainer=AquaPalette.AmberSurface,onTertiaryContainer=AquaPalette.Amber,
+        background=Cream,onBackground=AquaPalette.Text,surface=AquaPalette.White,onSurface=AquaPalette.Text,
+        surfaceVariant=AquaPalette.Soft,onSurfaceVariant=Muted,
+        surfaceContainerLowest=AquaPalette.White,surfaceContainerLow=AquaPalette.White,
+        surfaceContainer=AquaPalette.White,surfaceContainerHigh=AquaPalette.Soft,surfaceContainerHighest=AquaPalette.White,
+        outline=Muted,outlineVariant=AquaPalette.Outline,
+        error=AquaPalette.Error,onError=AquaPalette.White,errorContainer=AquaPalette.ErrorSurface,onErrorContainer=AquaPalette.Error
+    ),typography=Typography(
+        displayLarge=NumberStyle,displayMedium=NumberStyle,displaySmall=NumberStyle,
+        headlineLarge=body(30,FontWeight.Bold),headlineMedium=body(26,FontWeight.Bold),headlineSmall=body(23,FontWeight.Bold),
+        titleLarge=body(21,FontWeight.SemiBold),titleMedium=body(17,FontWeight.SemiBold),titleSmall=body(15,FontWeight.SemiBold),
+        bodyLarge=body(16),bodyMedium=body(14),bodySmall=body(12),
+        labelLarge=body(14,FontWeight.SemiBold),labelMedium=body(12,FontWeight.Medium),labelSmall=body(11)
+    ),shapes=Shapes(extraSmall=RoundedCornerShape(12.dp),small=RoundedCornerShape(16.dp),
+        medium=RoundedCornerShape(20.dp),large=RoundedCornerShape(CareSpace.Radius),extraLarge=RoundedCornerShape(28.dp)),
+        content={CompositionLocalProvider(LocalContentColor provides AquaPalette.Text){content()}})
 }

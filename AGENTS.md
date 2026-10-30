@@ -21,6 +21,7 @@
 - 2026-10-27 실물 재개 승인: docs/tasks/PERSONAL_DEVICE_ACCEPTANCE.md. LAN 전용 TLS·개인 설정·펌웨어/실측 인수를 진행하며 서버 원격 조작 금지는 유지한다.
 - 2026-10-28 온도 준비 전체 승인: docs/tasks/TEMPERATURE_COMPENSATION.md. v2 온도 계약·새 DB 마이그레이션·공식 드라이버·앱·모의 인수이며 보드 업로드/운영 배포는 제외한다.
 - 2026-10-29 서버 매시간 자동 측정 전체 승인: docs/tasks/HOURLY_AUTOMATIC_MEASUREMENT.md. 기본 OFF·지정 장비/재배·회차 중복 방지/기록 및 기존 START 재사용, 서버 운영 적용은 사용자 수동이다.
+- 2026-10-30 Botanical Aqua Android UI 전체 승인: docs/tasks/BOTANICAL_AQUA_UI.md. 기존 API/인증/쓰기/탐색 보존, 조회 한도 있는 차트·디자인 시스템·전체 화면 및 격리 인수, 서버/펌웨어/배포·Git 커밋/푸시 제외.
 - 원본 비교 정책: docs/NEXT_MEASUREMENT_COMPARISON.md. 구현·검증 상태는 실제 소스와 HANDOFF를 확인한다.
 - 구축·기능별 인수 조건과 승인 범위는 docs/tasks/에 기록한다.
 - 과거 페어 프로그래밍·사용자 직접 작성 지침은 현재 운영 규칙이 아니다.

@@ -21,17 +21,24 @@ import com.juca.hydroponic.MonitorState
             OwnerLogin(s.busy, login)
         } else {
             GardenIntro("돌봄 설정", "측정 장치와 내 계정을 관리해요.")
+            Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(CareSpace.Card),verticalArrangement=Arrangement.spacedBy(14.dp)) {
             Text("측정 장치", style = MaterialTheme.typography.titleLarge)
             OutlinedTextField(device, { device = it }, label = { Text("장치 ID · 측정할 때 필요") }, singleLine = true,
                 enabled = !s.busy, modifier = Modifier.fillMaxWidth())
             Button(onClick = { save(s.origin, device.trim()) }, enabled = !s.busy, modifier = Modifier.fillMaxWidth()) { Text("장치 설정 저장") }
             if (s.device.isNotEmpty()) OutlinedButton(onClick = checkDevice, enabled = !s.busy) { Text("저장된 장치 상태 확인") }
             s.deviceStatus?.let { Text(it) }
-            HorizontalDivider()
+            }
+            }
+            Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(CareSpace.Card),verticalArrangement=Arrangement.spacedBy(14.dp)) {
             Text("내 계정", style = MaterialTheme.typography.titleLarge)
             Text("개인 계정으로 로그인됨")
             OutlinedButton(onClick = logout, enabled = !s.busy) { Text("로그아웃") }
             Text("로그아웃은 진행 중인 서버 작업을 취소하지 않습니다.", style = MaterialTheme.typography.bodySmall)
+            }
+            }
         }
     }
 }

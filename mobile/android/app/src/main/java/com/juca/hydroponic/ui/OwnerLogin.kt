@@ -13,7 +13,8 @@ import androidx.compose.ui.unit.dp
     var username by remember { mutableStateOf("") }
     // Password intentionally never enters rememberSaveable, preferences, ViewModel state, or logs.
     var password by remember { mutableStateOf("") }
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Card(Modifier.fillMaxWidth()) {
+    Column(Modifier.padding(CareSpace.Card),verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text("내 계정 로그인", style = MaterialTheme.typography.titleLarge)
         OutlinedTextField(username, { username = it }, label = { Text("계정 이름") }, singleLine = true,
             enabled = !busy, modifier = Modifier.fillMaxWidth())
@@ -21,7 +22,8 @@ import androidx.compose.ui.unit.dp
             visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
             enabled = !busy, modifier = Modifier.fillMaxWidth())
         Button(onClick = { val submitted = password; password = ""; login(username.trim(), submitted) },
-            enabled = !busy && username.isNotBlank() && password.isNotEmpty(), modifier = Modifier.fillMaxWidth()) { Text("로그인") }
+            enabled = !busy && username.isNotBlank() && password.isNotEmpty(), modifier = Modifier.fillMaxWidth().heightIn(min=52.dp)) { Text("로그인") }
         Text("본인용 계정 하나로 사용합니다. 인증이 만료되면 다시 로그인하세요.", style = MaterialTheme.typography.bodySmall)
+    }
     }
 }
