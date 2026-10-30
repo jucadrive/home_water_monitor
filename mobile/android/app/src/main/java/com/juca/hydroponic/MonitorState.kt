@@ -12,5 +12,8 @@ data class MonitorState(
     val sessions: List<SessionSummary> = emptyList(), val moreSessions: Boolean = false,
     val trend: List<SessionSummary> = emptyList(), val unlinked: List<SessionSummary> = emptyList(),
     val moreUnlinked: Boolean = false, val session: SessionDetail? = null, val command: CommandStatus? = null,
-    val deviceStatus: String? = null
+    val deviceStatus: String? = null,
+    val initialLoading:Boolean=false, val readRetryAvailable:Boolean=false,
+    val trendPeriod:TrendPeriod=TrendPeriod.DAY, val trendEnd:String=java.time.Instant.now().toString(),
+    val trendLimited:Boolean=false, val chartBusy:Boolean=false, val chartError:String?=null
 )

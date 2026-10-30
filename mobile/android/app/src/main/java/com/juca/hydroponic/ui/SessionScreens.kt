@@ -24,66 +24,55 @@ import com.juca.hydroponic.data.SessionDetail
     }
 }
 @Composable fun SessionScreen(data: SessionDetail?) {
-    if (data == null) return
-    val s = data.session
-    var expanded by rememberSaveable(s.sessionId) { mutableStateOf(false) }
-    LazyColumn(Modifier.fillMaxSize().testTag("session-list"), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    if(data==null)return
+    val s=data.session
+    var expanded by rememberSaveable(s.sessionId){mutableStateOf(false)}
+    LazyColumn(Modifier.fillMaxSize().testTag("session-list"),contentPadding=PaddingValues(CareSpace.Screen),verticalArrangement=Arrangement.spacedBy(16.dp)) {
         item {
-            GardenIntro("측정 결과", "돌봄에 참고할 변화를 살펴보세요.", "측정 노트")
+            GardenIntro("측정 결과","물과 돌봄의 변화를 기록했어요.","측정 노트")
+            AquaMetricCard {
+                GardenBadge(if(s.preservationResult=="NORMAL") "정상 보존" else "불완전 보존 · 통계 제외",s.preservationResult!="NORMAL")
+                MetricValue(s.medianTdsPpm)
+                Text("${date(s.displayAt)} · ${basis(s.timeBasis)}",style=MaterialTheme.typography.bodySmall,color=Muted)
+                Text(temperatureLabel(s),style=MaterialTheme.typography.bodyMedium)
+                if(s.source=="SIMULATED") Text("가상 측정 · 실측 아님",style=MaterialTheme.typography.labelLarge)
+                else if(s.source!="ADS1115") Text("측정 출처: ${s.source}",style=MaterialTheme.typography.bodySmall)
+                Text("보존 상태는 데이터 저장 결과입니다.",style=MaterialTheme.typography.bodySmall,color=Muted)
+            }
+        }
+        if(s.preservationResult=="NORMAL") item {
+            CareStats(listOf("최소" to ppm(s.minTdsPpm),"평균" to ppm(s.avgTdsPpm),"최대" to ppm(s.maxTdsPpm),"통계 대상" to "${s.statsSampleCount}개"))
+        }
+        item { OutlinedButton(onClick={expanded=!expanded},modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)) {
+            Text(if(expanded) "상세 정보 접기" else "상세 정보 보기")
+        } }
+        if(expanded) item {
             Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    GardenBadge(if (s.preservationResult == "NORMAL") "정상 보존" else "불완전 보존 · 통계 제외", warm = s.preservationResult != "NORMAL")
-                    Text("TDS 중앙값", style = MaterialTheme.typography.labelLarge, color = Muted)
-                    Text(ppm(s.medianTdsPpm), style = if (s.medianTdsPpm == null) MaterialTheme.typography.headlineMedium else NumberStyle)
-                    Text(date(s.displayAt), style = MaterialTheme.typography.bodyMedium)
-                    Text(basis(s.timeBasis), style = MaterialTheme.typography.bodySmall, color = Muted)
-                    HorizontalDivider()
-                    if (s.source != "ADS1115") Text(
-                        if (s.source == "SIMULATED") "가상 측정 · 실측 아님" else "측정 출처: ${s.source}",
-                        style = MaterialTheme.typography.labelLarge)
-                    Text("원본 ${s.preservedSampleCount}/60 · 통계 ${s.statsSampleCount}개", style = MaterialTheme.typography.bodySmall)
-                    Text(temperatureLabel(s), style = MaterialTheme.typography.bodySmall, color = Muted)
+                Column(Modifier.padding(CareSpace.Card),verticalArrangement=Arrangement.spacedBy(14.dp)) {
+                    Text("원본 ${s.preservedSampleCount}/60 · 통계 ${s.statsSampleCount}개",style=MaterialTheme.typography.titleSmall)
+                    SessionFact("측정 장치",s.deviceId)
+                    SessionFact("측정 출처",s.source)
+                    s.temperatureSource?.let { SessionFact("온도 출처",it) }
+                    if(s.calibrationVersion=="sen0244-uncalibrated-v1") SessionFact("교정 상태","TDS 미교정")
+                    compensationLabel(s)?.let { SessionFact("온도 보정",it) }
+                    SessionFact("교정 버전",s.calibrationVersion)
+                    s.compensationVersion?.let { SessionFact("보정 공식 버전",it) }
+                    SessionFact("세션 ID",s.sessionId)
                 }
             }
         }
-        item {
-            OutlinedButton(onClick = { expanded = !expanded }, modifier = Modifier.fillMaxWidth()) {
-                Text(if (expanded) "상세 정보 접기" else "상세 정보 보기")
-            }
-        }
-        if (expanded) item {
+        item { GardenSection("보존 원본","안정화 원본도 보존하며 정상 통계에서는 제외합니다.") }
+        if(data.measurements.isEmpty()) item { GardenEmpty("보존된 원본이 없습니다.","통계를 임의의 수치로 채우지 않습니다.") }
+        items(data.measurements,key={it.seq}) { m->
             Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    if (s.preservationResult == "NORMAL") {
-                        SessionFact("최소", ppm(s.minTdsPpm))
-                        SessionFact("평균", ppm(s.avgTdsPpm))
-                        SessionFact("최대", ppm(s.maxTdsPpm))
-                    }
-                    SessionFact("측정 장치", s.deviceId)
-                    SessionFact("측정 출처", s.source)
-                    if (s.calibrationVersion == "sen0244-uncalibrated-v1") SessionFact("교정 상태", "TDS 미교정")
-                    compensationLabel(s)?.let { SessionFact("온도 보정", it) }
-                    SessionFact("교정 버전", s.calibrationVersion)
-                    s.temperatureSource?.let { SessionFact("온도 출처", it) }
-                    s.compensationVersion?.let { SessionFact("보정 공식 버전", it) }
-                    SessionFact("세션 ID", s.sessionId)
+                Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
+                    Text("#${m.seq} · ${m.elapsedMs} ms · ${ppm(m.tdsPpm)}",style=MaterialTheme.typography.titleSmall)
+                    Text(if(m.isWarmup) "안정화 원본 · 통계 제외" else "통계 대상 원본",style=MaterialTheme.typography.bodySmall,color=Muted)
+                    Text(m.rawVoltageMv?.toPlainString()?.plus(" mV")?:"전압 기록 없음",style=MaterialTheme.typography.bodySmall,color=Muted)
+                    m.temperatureC?.let { Text("수온 ${degrees(it)} · 관측 차 ${m.temperatureElapsedMs?.let { at->m.elapsedMs-at }?:"미상"} ms",
+                        style=MaterialTheme.typography.bodySmall,color=Muted) }
                 }
             }
-        }
-        item {
-            Spacer(Modifier.height(16.dp))
-            Text("보존 원본", style = MaterialTheme.typography.titleLarge)
-            Text("안정화 원본도 보존하며 정상 통계에서는 제외합니다.", style = MaterialTheme.typography.bodySmall)
-        }
-        if (data.measurements.isEmpty()) item { Text("보존된 원본이 없습니다.") }
-        items(data.measurements, key = { it.seq }) { m ->
-            Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(14.dp)) {
-                Text("#${m.seq} · ${m.elapsedMs} ms · ${ppm(m.tdsPpm)}")
-                Text(if (m.isWarmup) "안정화 원본 · 통계 제외" else "통계 대상 원본", style = MaterialTheme.typography.bodySmall)
-                Text(m.rawVoltageMv?.toPlainString()?.plus(" mV") ?: "전압 기록 없음", style = MaterialTheme.typography.bodySmall)
-                m.temperatureC?.let { Text("수온 ${degrees(it)} · 관측 차 ${m.temperatureElapsedMs?.let { at -> "${m.elapsedMs - at} ms" } ?: "미상"}",
-                    style = MaterialTheme.typography.bodySmall) }
-            } }
         }
     }
 }
@@ -91,13 +80,16 @@ import com.juca.hydroponic.data.SessionDetail
     val c = s.command ?: return
     LazyColumn(Modifier.fillMaxSize().testTag("command-list"), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         item {
-            GardenIntro("측정 요청 상태", "측정부터 보존까지, 차근차근 확인해요.", "측정 진행 일지")
+            GardenIntro("측정 요청 상태", "접수부터 원본 보존까지 확인해요.", "측정 진행 일지")
             Text("${c.deviceId ?: "장치 확인 중"} · 약 60회 측정 후 결과를 전송합니다.")
         }
         item {
-            Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(CareSpace.Card), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                Text(if(c.deviceBuffer=="RELEASE_CONFIRMED") "측정 기록을 보존했어요" else "측정 단계를 확인해요",style=MaterialTheme.typography.titleLarge)
                 Text("명령  ${c.commandState}")
+                HorizontalDivider(color=AquaPalette.Outline)
                 Text("서버 보존  ${c.serverPreservation}")
+                HorizontalDivider(color=AquaPalette.Outline)
                 Text("장치 버퍼  ${c.deviceBuffer}")
                 Text("관측 신선도  ${c.liveness}")
                 c.deviceState?.let { Text("장치 상태  $it") }

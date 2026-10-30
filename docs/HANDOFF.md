@@ -1,3 +1,21 @@
+# Botanical Aqua UI 개편 사용자 리뷰·Git 통합 승인 — 2026-10-30
+
+- 사용자가 개선 UI를 리뷰하고 현재 작업의 커밋·푸시·PR·main 병합을 승인했다. UI 작업 상태 DONE. codex/botanical-aqua-ui의 공개 소스/테스트/문서27개를 통합하며 비밀·첨부·APK·캡처·로컬 산출물은 제외한다. 메시지 `feat: redesign Android care dashboard with botanical aqua UI`. 아래 로컬 인수/미수행 Git 기록은 승인 전 체크포인트다. 커밋/PR/CI 식별자는 통합 후 최종 보고를 따른다.
+
+- 상태 VERIFIED(로컬), 사용자 실기기 리뷰/운영 API의 새 APK 인수 전 전체 DONE은 아니다. [승인 범위·최종 결과](tasks/BOTANICAL_AQUA_UI.md). 브랜드 뽀싹, 기존 Compose/Material3/화면 전환·실제 데이터·인증·미확정 쓰기 보호를 유지했다.
+- 테마/공통 아쿠아 카드·화이트 목록·홈 요약·재배 대시보드·실제 시간 차트(24시간/7일/30일·선택)·날짜별 타임라인·이력·측정 결과/접는 상세·로그인/설정/폼·Skeleton/읽기 오류를 개선했다. 차트는 기존API 최대1600건/20초이며 부분 조회를 표시한다. backend/firmware/API 계약/의존성·인증 핵심 변경 없음.
+- 최종 표준 HTTPS Full PASS: JVM32개 새 실행, 실패0/오류0/건너뜀0, debug/미서명release 성공, Lint 오류0/기존 경고11. UI22개와 별도 격리 종단23개 모두 PASS(각 실패/오류/건너뜀0). 최종 차트 캡처1개 PASS. 텍스트 대비9조합 모두4.5 이상. 수정3/5, 이전 실패와 근거는 작업 명세/로그에 보존했다.
+- APK `.tools/aqua-ui/ppossak-aqua-debug.apk`, SHA256 `A1FBF32EE1655208457D5CAB84ED618278C8C3D3DF6E0F6122076C96C8071904`. 요약/로그/XML/테스트 fixture 캡처는 `.tools/aqua-ui`에 있다. 실제 폰 설치/운영 API·실장비 회귀·전체 TalkBack 수동 인수·실제30일 대량 성능은 NOT RUN.
+- 전용 시험 API/DB/MQTT2개 종료, Testcontainers·ADB reverse 정리 확인. 시험 소유 flutter_emulator만 종료했고 Docker/운영 서비스는 유지했다. 커밋/푸시/PR/병합·서버 SSH/배포 없음. 브랜치 codex/botanical-aqua-ui, 변경은 unstaged. 신규 Kotlin200줄 초과 없음, 기존 ViewModel206줄은 리뷰 대상.
+
+## 이전 진행 체크포인트
+
+- 사용자 전체 계획 승인·앱 이름 뽀싹 유지. main9d64b1c에서 codex/botanical-aqua-ui 시작, 초기 작업 트리clean/첨부·개인 설정 보존. [작업 명세](tasks/BOTANICAL_AQUA_UI.md). 서버·펌웨어·공개 계약·의존성 변경 없음.
+- 테마/토큰/정적 아쿠아 카드·화이트 목록·홈·상세/기간 차트·선택·날짜별 타임라인/시트·결과/통계·로그인/폼/설정/명령·Skeleton/읽기 오류를 구현했다. 차트는 기존API200건×최대8페이지/20초 예산·기간 경계 종료·부분 조회 표시다. 가상 측정/과거 가정 수온·원본/안정화 구분 및 미확정 쓰기 보호 유지.
+- Phase1/2 Kotlin 컴파일 PASS(20초/28초). 첫 Android Full PASS/1분7초, JVM32개 새 실행 실패0/오류0/건너뜀0·Lint 오류0/기존 경고11·debug/미서명 release. 이후 오류 표시 보완이 있어 최종 Full은 마지막에 확인한다.
+- 첫 UI22개 중20개 PASS/2실패: 큰 글꼴의 LazyColumn 화면 밖 버튼 검색, 시트 뒤 동일값 중복 선택. 검사 스크롤/시트 범위 보완과 긴 관리 메모 스크롤·텍스트 색상 토큰 적용 후 UI 재검증 중. 아직 VERIFIED가 아니다. 격리 종단용 전용 API/DB/MQTT 실행 중이며 운영 접근 없음.
+- 작업 증거 `.tools/aqua-ui`, 이전 실패도 보존. 커밋/푸시/폰 설치·장비 제어 없음. 신규 Kotlin200줄 초과 없음(기존 ViewModel은206줄로 표시용 읽기 보조가 늘었으며 별도 구조 분할은 하지 않았다).
+
 # 온도·UI·매시간 자동 측정 Git 통합 승인 — 2026-10-29
 
 - 사용자가 지금까지 변경의 기존 절차대로 Git 반영을 지시했다. 소스·테스트·공개 계약/의존성 lock·배포 템플릿·문서만 stage/commit/push/PR/main 병합한다. 실제 비밀 설정·개인 헤더·APK/JAR/bin·캡처·첨부·로컬 검증 산출물은 제외한다. 첨부 폴더와 운영 자동 측정 env는 루트 ignore로 보호한다.

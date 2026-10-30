@@ -36,10 +36,12 @@ import com.juca.hydroponic.data.Dates
     var memo by rememberSaveable { mutableStateOf("") }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         GardenIntro("물·영양액 관리 기록", "오늘 해 준 돌봄을 차곡차곡 남겨요.", "돌봄 노트")
+        FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
         for ((value, label) in listOf("REPLACE" to "영양액 교체", "TOP_UP" to "물 보충", "NUTRIENT_ADD" to "영양액·영양제 추가")) {
             FilterChip(selected = type == value, onClick = { type = value }, label = { Text(label) }, enabled = !disabled)
         }
-        if (type == "REPLACE") Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        }
+        if (type == "REPLACE") FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             FilterChip(scope == "FULL", { scope = "FULL" }, { Text("전체 교체") }, enabled = !disabled)
             FilterChip(scope == "PARTIAL", { scope = "PARTIAL" }, { Text("부분 교체") }, enabled = !disabled)
         }

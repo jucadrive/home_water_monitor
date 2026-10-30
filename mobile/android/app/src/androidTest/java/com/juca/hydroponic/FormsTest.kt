@@ -40,14 +40,15 @@ class FormsTest {
         compose.setContent { GardenTheme { SessionScreen(SessionDetail(session, emptyList())) } }
         compose.onNodeWithText("불완전 보존 · 통계 제외").assertIsDisplayed()
         compose.onNodeWithText("측정 기록 없음").assertIsDisplayed()
-        compose.onNodeWithText("0 ppm").assertDoesNotExist()
+        compose.onNodeWithText("0.00 ppm").assertDoesNotExist()
     }
     @Test fun trendDoesNotMixSimulatedOrIncompleteValuesIntoRealSeries() {
         val sessions = listOf(summary("NORMAL", "ADS1115", BigDecimal("100")),
             summary("NORMAL", "SIMULATED", BigDecimal("900")), summary("INCOMPLETE", "ADS1115", null))
-        compose.setContent { GardenTheme { TrendChart(sessions, emptyList()) } }
-        compose.onNodeWithText("100 ~ 100 ppm").assertIsDisplayed()
-        compose.onNodeWithContentDescription("실측 정상 TDS 중앙값 추세, 최저 100.0, 최고 100.0 ppm").assertExists()
+        compose.setContent { GardenTheme { TrendChart(sessions, emptyList(),end=java.time.Instant.parse("2026-10-30T00:00:00Z")) } }
+        compose.onNodeWithText("100.00 ppm").assertIsDisplayed()
+        compose.onNodeWithContentDescription("실측 정상 TDS 중앙값 추세, 1개 관측, 단위 ppm").assertExists()
+        compose.onNodeWithText("900.00 ppm").assertDoesNotExist()
     }
     @Test fun enlargedFontFormStillSubmitsThroughScrollableLayout() {
         var submitted = false
@@ -88,14 +89,16 @@ class FormsTest {
                 GardenTheme { Box(Modifier.width(320.dp)) { SessionScreen(SessionDetail(session, emptyList())) } }
             }
         }
-        compose.onNodeWithText("120 ppm").assertExists()
+        compose.onNodeWithText("120.00 ppm").assertExists()
         compose.onNodeWithText("가상 측정 · 실측 아님").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("25°C 가정 · 실측 수온 아님").performScrollTo().assertIsDisplayed()
         snapshot("result-large")
         compose.onNodeWithText("세션 ID").assertDoesNotExist()
+        compose.onNodeWithTag("session-list").performScrollToNode(hasText("상세 정보 보기"))
         compose.onNodeWithText("상세 정보 보기").performScrollTo().performClick()
         compose.onNodeWithText("교정 버전").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("s-SIMULATED").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("session-list").performScrollToNode(hasText("상세 정보 접기"))
         compose.onNodeWithText("상세 정보 접기").performScrollTo().performClick()
         compose.onNodeWithText("세션 ID").assertDoesNotExist()
         compose.onNodeWithText("보존 원본").performScrollTo().assertIsDisplayed()
