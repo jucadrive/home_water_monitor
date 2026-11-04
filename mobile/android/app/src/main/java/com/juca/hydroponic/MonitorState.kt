@@ -2,7 +2,7 @@ package com.juca.hydroponic
 
 import com.juca.hydroponic.data.*
 
-enum class Screen { SETTINGS, LIST, CREATE, DETAIL, MAINTENANCE, UNLINKED, SESSION, COMMAND }
+enum class Screen { SETTINGS, LIST, CREATE, DETAIL, MAINTENANCE, UNLINKED, SESSION, COMMAND, EDIT_PROFILE, EDIT_MAINTENANCE }
 data class MonitorState(
     val screen: Screen = Screen.SETTINGS, val sessionParent: Screen = Screen.UNLINKED, val origin: String = "", val device: String = "",
     val busy: Boolean = false, val error: String? = null, val pending: PendingMutation? = null,
@@ -15,5 +15,8 @@ data class MonitorState(
     val deviceStatus: String? = null,
     val initialLoading:Boolean=false, val readRetryAvailable:Boolean=false,
     val trendPeriod:TrendPeriod=TrendPeriod.DAY, val trendEnd:String=java.time.Instant.now().toString(),
-    val trendLimited:Boolean=false, val chartBusy:Boolean=false, val chartError:String?=null
+    val trendLimited:Boolean=false, val chartBusy:Boolean=false, val chartError:String?=null,
+    val historyMaintenance:Boolean=false,val historyOffset:Int=0,val careHistory:List<Maintenance> = emptyList(),
+    val editMaintenance:Maintenance?=null,val editConflict:Boolean=false,val editLatestReady:Boolean=false,
+    val editLatestProfile:Cultivation?=null,val editLatestMaintenance:Maintenance?=null
 )

@@ -80,6 +80,10 @@ import kotlinx.coroutines.delay
                         Screen.UNLINKED -> UnlinkedScreen(state, vm)
                         Screen.SESSION -> SessionScreen(state.session)
                         Screen.COMMAND -> CommandScreen(state, vm)
+                        Screen.EDIT_PROFILE -> state.detail?.cultivation?.let { ProfileEditForm(it,state.busy||state.pending!=null,state.editConflict,
+                            state.editLatestProfile.takeIf { state.editLatestReady },vm::reloadEdit,vm::acceptLatestEdit,vm::back,vm::saveProfile) }
+                        Screen.EDIT_MAINTENANCE -> state.editMaintenance?.let { MaintenanceEditForm(it,state.busy||state.pending!=null,state.editConflict,
+                            state.editLatestMaintenance.takeIf { state.editLatestReady },vm::reloadEdit,vm::acceptLatestEdit,vm::back,vm::saveMaintenance) }
                     }
                     }
                 }

@@ -7,7 +7,10 @@ import java.util.UUID;
 
 // A cultivation represents one independently maintained reservoir during one growing period.
 public record Cultivation(UUID id, String plantName, String name, Instant startedAt, Instant endedAt,
-                          String memo, Instant createdAt, Instant updatedAt) {
+                          String memo, Instant createdAt, Instant updatedAt, long version) {
+    public Cultivation(UUID id,String plantName,String name,Instant startedAt,Instant endedAt,String memo,Instant createdAt,Instant updatedAt) {
+        this(id,plantName,name,startedAt,endedAt,memo,createdAt,updatedAt,0);
+    }
     public Cultivation {
         Objects.requireNonNull(id);
         plantName = text(plantName, 100, true);
@@ -16,6 +19,7 @@ public record Cultivation(UUID id, String plantName, String name, Instant starte
         startedAt = Objects.requireNonNull(startedAt).truncatedTo(ChronoUnit.MICROS);
         Objects.requireNonNull(createdAt);
         Objects.requireNonNull(updatedAt);
+        if(version<0)throw new IllegalArgumentException("Invalid version");
         if (startedAt.isAfter(createdAt) || endedAt != null && endedAt.isBefore(startedAt))
             throw new IllegalArgumentException("Invalid cultivation time");
     }

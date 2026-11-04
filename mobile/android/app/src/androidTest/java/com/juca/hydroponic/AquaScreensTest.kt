@@ -81,7 +81,7 @@ class AquaScreensTest {
         val state=MonitorState(detail=Overview(plant,end.minusSeconds(7200).toString(),latest),sessions=listOf(latest),
             maintenance=listOf(Maintenance("water","REPLACE","FULL",end.minusSeconds(7200).toString(),BigDecimal("1000"),"용기 정리")),
             trend=listOf(latest,row("old",end.minusSeconds(7200),"142.58")),trendEnd=end.toString(),device="esp32-bench")
-        compose.setContent { GardenTheme { DetailScreen(state,vm) } }
+        compose.setContent { GardenTheme { DetailScreen(state,vm,onHistoryLoad={_,_->}) } }
         compose.onNodeWithTag("metric-value").assertIsDisplayed()
         snapshot("detail")
         compose.onNodeWithTag("detail-list").performScrollToNode(hasText("전체 물 교체"))

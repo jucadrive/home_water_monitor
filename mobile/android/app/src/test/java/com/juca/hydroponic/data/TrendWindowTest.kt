@@ -35,8 +35,8 @@ class TrendWindowTest {
     @Test fun timelineUsesActualEventsAndPreservesUnknownAmounts() {
         val plant=Cultivation("c","basil","tank",end.minusSeconds(86400).toString(),null,"ACTIVE","")
         val water=Maintenance("m","TOP_UP",null,end.toString(),null,"note")
-        val rows=careEvents(plant,listOf(row("s",end.minusSeconds(60))),listOf(water))
-        assertEquals(listOf("m-m","s-s","start-c"),rows.map { it.key })
+        val rows=careEvents(plant,listOf(water))
+        assertEquals(listOf("m-m","start-c"),rows.map { it.key })
         assertEquals("작업량 미상",rows.first().detail)
         assertEquals("오늘",careDayLabel(LocalDate.of(2026,10,30),LocalDate.of(2026,10,30)))
         assertEquals("어제",careDayLabel(LocalDate.of(2026,10,29),LocalDate.of(2026,10,30)))

@@ -54,11 +54,11 @@ import com.juca.hydroponic.data.Dates
             enabled = !disabled && memo.length <= 2000) { Text("관리 이력 등록") }
     }
 }
-@Composable private fun DateField(value: String, change: (String) -> Unit, enabled: Boolean, label: String) {
+@Composable internal fun DateField(value: String, change: (String) -> Unit, enabled: Boolean, label: String) {
     OutlinedTextField(value, change, label = { Text(label) }, singleLine = true, modifier = Modifier.fillMaxWidth(), enabled = enabled,
         supportingText = { Text("기기 시간대 · YYYY-MM-DD HH:mm") })
 }
-@Composable private fun MemoField(value: String, change: (String) -> Unit, enabled: Boolean) {
+@Composable internal fun MemoField(value: String, change: (String) -> Unit, enabled: Boolean) {
     OutlinedTextField(value, change, label = { Text("메모 · 선택") }, modifier = Modifier.fillMaxWidth(), enabled = enabled,
         minLines = 3, isError = value.length > 2000, supportingText = { Text("${value.length}/2000") })
 }

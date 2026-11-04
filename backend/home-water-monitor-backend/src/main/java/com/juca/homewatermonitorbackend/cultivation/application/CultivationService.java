@@ -20,8 +20,7 @@ public class CultivationService {
         var candidate=new Cultivation(key,input.plantName(),input.name(),input.startedAt(),null,input.memo(),now,now);
         boolean inserted=store.insert(candidate);
         var actual=required(key,false).snapshot();
-        if (!actual.plantName().equals(candidate.plantName()) || !actual.name().equals(candidate.name())
-                || !actual.startedAt().equals(candidate.startedAt()) || !actual.memo().equals(candidate.memo()))
+        if (!store.matchesRegistration(candidate))
             throw new CultivationException(409,"IDEMPOTENCY_CONFLICT");
         return new Registration(actual,inserted);
     }

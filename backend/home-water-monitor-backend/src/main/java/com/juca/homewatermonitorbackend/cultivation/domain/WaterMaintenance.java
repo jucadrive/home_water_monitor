@@ -7,15 +7,19 @@ import java.util.Objects;
 import java.util.UUID;
 
 public record WaterMaintenance(UUID id,UUID cultivationId,Type type,Scope replacementScope,
-                               Instant occurredAt,BigDecimal amountMl,String memo,Instant createdAt) {
+                               Instant occurredAt,BigDecimal amountMl,String memo,Instant createdAt,Instant updatedAt,long version) {
+    public WaterMaintenance(UUID id,UUID cultivationId,Type type,Scope replacementScope,Instant occurredAt,BigDecimal amountMl,String memo,Instant createdAt) {
+        this(id,cultivationId,type,replacementScope,occurredAt,amountMl,memo,createdAt,createdAt,0);
+    }
     public enum Type { REPLACE, TOP_UP, NUTRIENT_ADD }
     public enum Scope { FULL, PARTIAL }
     public WaterMaintenance {
         Objects.requireNonNull(id);Objects.requireNonNull(cultivationId);Objects.requireNonNull(type);
         Objects.requireNonNull(createdAt);
+        Objects.requireNonNull(updatedAt);
         occurredAt=Objects.requireNonNull(occurredAt).truncatedTo(ChronoUnit.MICROS);
         memo=Cultivation.text(memo,2000,false);
-        if ((type==Type.REPLACE)!=(replacementScope!=null) || occurredAt.isAfter(createdAt))
+        if ((type==Type.REPLACE)!=(replacementScope!=null) || occurredAt.isAfter(updatedAt) || version<0)
             throw new IllegalArgumentException("Invalid maintenance");
         if(amountMl!=null) {
             if(amountMl.signum()<=0 || amountMl.stripTrailingZeros().scale()>2
@@ -27,6 +31,11 @@ public record WaterMaintenance(UUID id,UUID cultivationId,Type type,Scope replac
     public void requireWithin(Cultivation c) {
         c.requireActive();
         if(!cultivationId.equals(c.id()) || occurredAt.isBefore(c.startedAt()))
+            throw new IllegalArgumentException("Outside cultivation period");
+    }
+    public void requireCorrectionWithin(Cultivation c) {
+        if(!cultivationId.equals(c.id()) || occurredAt.isBefore(c.startedAt())
+                || c.endedAt()!=null && occurredAt.isAfter(c.endedAt()))
             throw new IllegalArgumentException("Outside cultivation period");
     }
     public boolean same(WaterMaintenance other) {

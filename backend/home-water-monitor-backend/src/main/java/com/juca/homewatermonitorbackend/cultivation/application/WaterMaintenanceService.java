@@ -29,7 +29,7 @@ public class WaterMaintenanceService {
         return match(store.find(key),candidate,inserted);
     }
     private Registration match(WaterMaintenance actual,WaterMaintenance candidate,boolean created) {
-        if(!actual.same(candidate))throw new CultivationException(409,"IDEMPOTENCY_CONFLICT");
+        if(!store.matchesRegistration(candidate))throw new CultivationException(409,"IDEMPOTENCY_CONFLICT");
         return new Registration(actual,created);
     }
     @Transactional(readOnly=true)

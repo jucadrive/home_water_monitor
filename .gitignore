@@ -17,6 +17,7 @@
 
 # Gradle caches and generated output
 .gradle/
+.kotlin/
 build/
 out/
 bin/
