@@ -1,5 +1,7 @@
 # 뽀싹 Docker 수동 배포
 
+> 보관 원본 우선 자동 복구(V12·기본 OFF)는 [자동 복구 업데이트 안내](AUTOMATIC_BUFFER_RECOVERY_SETUP.md)를 따른다. 기존 자동 측정 overlay와 백엔드만 갱신하며 비밀·앱·펌웨어·브로커는 유지한다.
+
 > 재배 이름·메모/돌봄 기록 수정 업데이트는 [기존 서버 수동 교체 안내](CARE_RECORD_EDITING_SETUP.md)를 따른다. V11 포함 검증 JAR와 새 APK가 필요하며 기존 Compose·비밀·자동 측정 설정은 유지한다.
 
 > 매시간 자동 측정 확장은 [별도 적용 안내](HOURLY_AUTOMATIC_MEASUREMENT.md)를 따른다. 기본 OFF이며 기존 Compose/비밀번호/포트를 보존하고 opt-in overlay와 V10 포함 실행 JAR를 사용자 수동으로 적용한다.

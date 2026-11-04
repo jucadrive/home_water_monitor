@@ -19,6 +19,17 @@ public class DeviceControlStore {
     public DeviceControlStore(JdbcTemplate jdbc) { this.jdbc = jdbc; }
     public record Slot(String deviceId, UUID boot, UUID active, UUID held) { }
     public record Observation(Status status, Instant receivedAt, Instant confirmedAt, UUID epoch) { }
+    public Slot slot(String device) {
+        var rows=jdbc.query("select * from tds_device_control where device_id=?",(r,n)->
+            new Slot(device,r.getObject("current_boot_id",UUID.class),r.getObject("active_command_id",UUID.class),
+                r.getObject("held_session_id",UUID.class)),device);
+        return rows.isEmpty()?null:rows.getFirst();
+    }
+    public ControlCommand sourceStart(String device,UUID session) {
+        var rows=jdbc.query("select * from tds_device_command where device_id=? and session_id=? and command_type='START'",
+            this::commandRow,device,session);
+        return rows.size()==1?rows.getFirst():null;
+    }
     public Slot lock(String device) {
         jdbc.queryForObject("select set_config('lock_timeout','1000ms',true)", String.class);
         jdbc.queryForObject("select set_config('statement_timeout','2000ms',true)", String.class);

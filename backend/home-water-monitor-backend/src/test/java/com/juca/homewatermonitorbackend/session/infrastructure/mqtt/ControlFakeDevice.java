@@ -18,6 +18,7 @@ class ControlFakeDevice implements AutoCloseable {
     final ObjectNode status;
     final AtomicInteger executions=new AtomicInteger(),startsReceived=new AtomicInteger();
     volatile boolean ignoreStart;
+    volatile boolean recoverResults;
     private UUID window;
     private long sequence;
     ControlFakeDevice(String uri) throws Exception {
@@ -35,9 +36,19 @@ class ControlFakeDevice implements AutoCloseable {
         var options=new MqttConnectionOptions();options.setCleanStart(true);options.setConnectionTimeout(5);
         client.connect(options).waitForCompletion(5000);
         client.subscribe("home/water/v1/esp32-bench/commands",1).waitForCompletion(5000);
+        client.subscribe("home/water/v2/esp32-bench/preservation",1).waitForCompletion(5000);
     }
     synchronized void handle(MqttMessage message) {
         var command=codec.tree(message.getPayload());String type=command.get("eventType").asString();
+        if("SESSION_PRESERVED".equals(type)) {
+            if(recoverResults && command.get("sessionId").equals(status.get("sessionId"))
+                    && "NORMAL".equals(command.get("preservationResult").asString())) {
+                status.put("state","IDLE").putNull("sessionId").put("sampleCount",0).put("finalized",false).put("round",0).put("attempt",0);
+                status.putObject("lastRelease").put("sessionId",command.get("sessionId").asString())
+                    .put("preservationResult","NORMAL").put("preservedSampleCount",60).put("reason","PRESERVATION_CONFIRMED");emit();
+            }
+            return;
+        }
         if("STATE_REQUEST".equals(type)) {
             status.put("replyToProbeId",command.get("probeId").asString());
             if("IDLE".equals(status.get("state").asString()) || "MANUAL_WAIT".equals(status.get("state").asString())) {
@@ -58,6 +69,16 @@ class ControlFakeDevice implements AutoCloseable {
         status.putObject("commandResult").put("commandId",command.get("commandId").asString()).put("commandType",type)
                 .put("sessionId",command.get("sessionId").asString()).put("outcome","ACCEPTED").putNull("reason");
         emit();
+        if(retry && recoverResults) {
+            try {
+                var result=(ObjectNode)tools.jackson.databind.json.JsonMapper.builder().build().readTree(Files.readAllBytes(
+                    Path.of("../../docs/mqtt/v2/examples/session-result-normal.json")));
+                result.put("sessionId",command.get("sessionId").asString()).put("deviceId","esp32-bench");
+                var m=new MqttMessage(codec.encode(result));m.setQos(1);
+                var p=new MqttProperties();p.setPayloadFormat(true);p.setContentType("application/json");m.setProperties(p);
+                client.publish("home/water/v2/esp32-bench/events",m);
+            } catch(Exception failure){throw new IllegalStateException(failure);}
+        }
     }
     synchronized void emit(){status.putNull("replyToProbeId").putNull("controlWindow");send();}
     private void send() {

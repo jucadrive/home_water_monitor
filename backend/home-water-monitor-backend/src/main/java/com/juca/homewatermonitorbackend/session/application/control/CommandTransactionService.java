@@ -18,6 +18,9 @@ public class CommandTransactionService {
         return reserve(key,device,type,requestedSession,null);
     }
     public ControlCommand reserve(UUID key,String device,String type,UUID requestedSession,UUID cultivation) {
+        return reserve(key,device,type,requestedSession,cultivation,null);
+    }
+    public ControlCommand reserve(UUID key,String device,String type,UUID requestedSession,UUID cultivation,RecoveryExpectation expected) {
         var previous=store.byKey(key);
         if(previous!=null)return match(previous,device,type,requestedSession,cultivation);
         if(cultivation!=null) {
@@ -28,6 +31,20 @@ public class CommandTransactionService {
         var existing=store.byKey(key);
         if(existing!=null) return match(existing,device,type,requestedSession,cultivation);
         var active=store.command(slot.active());
+        if(expected!=null) {
+            var observation=store.observation(device);
+            var s=observation==null?null:observation.status();
+            var source=store.sourceStart(device,requestedSession);
+            if(!"RETRY".equals(type) || !java.util.Objects.equals(slot.active(),expected.activeCommand())
+                    || !java.util.Objects.equals(slot.boot(),expected.boot()) || s==null
+                    || !expected.boot().equals(s.bootId()) || !requestedSession.equals(slot.held())
+                    || !requestedSession.equals(s.sessionId()) || !"MANUAL_WAIT".equals(s.state())
+                    || !s.finalized() || s.sampleCount()!=60 || s.attempt()!=5 || s.round()!=expected.round()
+                    || !s.controlReady() || !"MQTT".equals(s.controlMode()) || s.fault()!=null
+                    || s.lastExecution()==null || !expected.execution().equals(s.lastExecution().commandId())
+                    || source==null || !expected.cultivation().equals(source.cultivationId()))
+                throw new ControlException(409,"RECOVERY_STATE_CHANGED");
+        }
         if("START".equals(type)) {
             if(slot.held()!=null || active!=null) throw new ControlException(409,"CONTROL_BUSY");
         } else if(slot.held()==null || !slot.held().equals(requestedSession)
@@ -106,6 +123,17 @@ public class CommandTransactionService {
                 && store.preserved(held,release.preservationResult(),release.preservedSampleCount())) { held=null; activeId=null; }
         store.slot(s.deviceId(),s.bootId(),activeId,held);
         store.observation(s,probe,epoch,received);
+        if("MANUAL_WAIT".equals(s.state()) && (old==null || !"MANUAL_WAIT".equals(old.status().state())
+                || old.status().round()!=s.round() || !java.util.Objects.equals(old.status().sessionId(),s.sessionId()))) {
+            org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+                new org.springframework.transaction.support.TransactionSynchronization() {
+                    @Override public void afterCommit() {
+                        org.slf4j.LoggerFactory.getLogger(CommandTransactionService.class).warn(
+                            "Device result waiting device={} session={} boot={} round={} attempt={} samples={}",
+                            s.deviceId(),s.sessionId(),s.bootId(),s.round(),s.attempt(),s.sampleCount());
+                    }
+                });
+        }
         return true;
     }
     public void recover() {

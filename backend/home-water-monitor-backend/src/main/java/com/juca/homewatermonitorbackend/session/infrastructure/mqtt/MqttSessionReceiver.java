@@ -34,6 +34,8 @@ public class MqttSessionReceiver implements MessageHandler {
     public void handleMessage(Message<?> message) {
         SimpleAcknowledgment ack = StaticMessageHeaderAccessor.getAcknowledgment(message);
         String stage = "INPUT";
+        String device=null;
+        java.util.UUID session=null;
         try {
             if (TransactionSynchronizationManager.isActualTransactionActive()) {
                 throw new IllegalStateException("MQTT_OUTER_TRANSACTION");
@@ -47,14 +49,18 @@ public class MqttSessionReceiver implements MessageHandler {
             var command = codec.decode(mqtt.getPayload(), message.getHeaders().get(MqttHeaders.RECEIVED_TOPIC,
                     String.class), allowed);
             stage = "STORAGE";
+            device=command.deviceId();session=command.sessionId();
+            log.info("MQTT result received device={} session={}",device,session);
             // 이 호출은 별도 서비스 프록시의 실제 커밋까지 마친 뒤 반환한다.
             var result = processing.process(command);
+            log.info("MQTT result committed device={} session={}",device,session);
             stage = "PUBLISH";
             int version = command.temperatureSource() == null ? 1 : 2;
             publisher.accept("home/water/v" + version + "/" + command.deviceId() + "/preservation",
                     codec.encode(command.deviceId(), result, version));
+            log.info("MQTT preservation published device={} session={}",device,session);
         } catch (RuntimeException error) {
-            log.warn("MQTT processing failed stage={}", stage);
+            log.warn("MQTT processing failed stage={} device={} session={} type={}", stage,device,session,error.getClass().getSimpleName());
         } finally {
             if (ack != null) {
                 try { ack.acknowledge(); }

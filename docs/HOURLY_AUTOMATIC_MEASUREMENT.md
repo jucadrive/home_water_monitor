@@ -1,5 +1,7 @@
 # 매시간 서버 자동 측정
 
+> 보관 원본의 제한된 자동 RETRY는 별도 opt-in 확장이다. [V12 업데이트·활성화](AUTOMATIC_BUFFER_RECOVERY_SETUP.md), [계약·검증 상태](tasks/AUTOMATIC_BUFFER_RECOVERY.md)를 따른다. 아래 START 전용/재시도 없음 정책은 복구 설정이 OFF인 경우에 적용한다.
+
 기본 OFF다. 아래는 사용자가 미니 PC에 직접 적용하는 절차이며 에이전트는 SSH로 접속하지 않는다. 기존 앱 수동 측정과 ESP32 펌웨어는 그대로 사용한다. 구현·검증 결과는 [작업 기록](tasks/HOURLY_AUTOMATIC_MEASUREMENT.md)에서 확인한다.
 
 ## 동작
