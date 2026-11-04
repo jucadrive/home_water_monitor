@@ -9,10 +9,10 @@ fun JSONObject.decimal(key: String): BigDecimal? = text(key)?.toBigDecimal()
 fun <T> JSONArray.items(parse: (JSONObject) -> T): List<T> = (0 until length()).map { parse(getJSONObject(it)) }
 
 data class Cultivation(val id: String, val plantName: String, val name: String, val startedAt: String,
-    val endedAt: String?, val status: String, val memo: String) {
+    val endedAt: String?, val status: String, val memo: String, val version:Long=0) {
     companion object {
         fun parse(j: JSONObject) = Cultivation(j.getString("id"), j.getString("plantName"), j.getString("name"),
-            j.getString("startedAt"), j.text("endedAt"), j.getString("status"), j.optString("memo"))
+            j.getString("startedAt"), j.text("endedAt"), j.getString("status"), j.optString("memo"),j.optLong("version",0))
     }
 }
 data class SessionSummary(val sessionId: String, val deviceId: String, val cultivationId: String?,
@@ -38,10 +38,10 @@ data class Overview(val cultivation: Cultivation, val lastFullReplacementAt: Str
     }
 }
 data class Maintenance(val id: String, val type: String, val replacementScope: String?, val occurredAt: String,
-    val amountMl: BigDecimal?, val memo: String) {
+    val amountMl: BigDecimal?, val memo: String, val version:Long=0, val updatedAt:String?=null) {
     companion object {
         fun parse(j: JSONObject) = Maintenance(j.getString("id"), j.getString("type"), j.text("replacementScope"),
-            j.getString("occurredAt"), j.decimal("amountMl"), j.optString("memo"))
+            j.getString("occurredAt"), j.decimal("amountMl"), j.optString("memo"),j.optLong("version",0),j.text("updatedAt"))
     }
 }
 data class Sample(val seq: Int, val elapsedMs: Int, val tdsPpm: BigDecimal, val isWarmup: Boolean, val rawVoltageMv: BigDecimal?, val temperatureC: BigDecimal? = null, val temperatureElapsedMs: Int? = null)

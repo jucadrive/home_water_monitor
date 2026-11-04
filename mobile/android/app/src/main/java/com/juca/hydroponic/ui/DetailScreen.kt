@@ -20,7 +20,7 @@ fun maintenanceLabel(m:Maintenance):String=when(m.type) {
     else->"영양액·영양제 추가"
 }
 fun basis(value:String):String=when(value){"MEASURED"->"측정 시각";"REQUESTED"->"측정 요청 시각";else->"서버 수신 시각"}
-@Composable fun DetailScreen(s:MonitorState,vm:MonitorViewModel) {
+@Composable fun DetailScreen(s:MonitorState,vm:MonitorViewModel,onHistoryLoad:(Boolean,Int)->Unit={care,offset->vm.historyPage(care,offset)}) {
     val data=s.detail?:return
     val c=data.cultivation
     var ending by rememberSaveable(c.id) { mutableStateOf(false) }
@@ -29,14 +29,10 @@ fun basis(value:String):String=when(value){"MEASURED"->"측정 시각";"REQUESTE
     val active=c.status=="ACTIVE"
     val until=c.endedAt?.let(Instant::parse)?:Instant.now()
     val days=ChronoUnit.DAYS.between(Instant.parse(c.startedAt).atZone(ZoneId.systemDefault()).toLocalDate(),until.atZone(ZoneId.systemDefault()).toLocalDate())+1
-    val grouped=remember(c,s.sessions,s.maintenance){careEvents(c,s.sessions,s.maintenance).groupBy { careDay(it.time) }}
+    val grouped=remember(c,s.maintenance){careEvents(c,s.maintenance.take(10)).groupBy { careDay(it.time) }}
     LazyColumn(Modifier.fillMaxSize().testTag("detail-list"),contentPadding=PaddingValues(CareSpace.Screen),verticalArrangement=Arrangement.spacedBy(18.dp)) {
         item {
-            GardenBadge("${c.plantName} · ${if(active) "재배 중" else "종료"}",!active)
-            GardenIntro(c.name,if(active) "함께 돌본 지 ${days}일째" else "${days}일간 함께한 기록","나의 식물 일지")
-            Text("시작 ${date(c.startedAt)}",color=Muted,style=MaterialTheme.typography.bodySmall)
-            c.endedAt?.let { Text("종료 ${date(it)}",color=Muted,style=MaterialTheme.typography.bodySmall) }
-            if(c.memo.isNotBlank()) Text(c.memo,Modifier.padding(top=10.dp),style=MaterialTheme.typography.bodyMedium)
+            CultivationHeader(c,days,!s.busy&&s.pending==null,vm::editProfile,{ending=true})
         }
         item {
             AquaMetricCard {
@@ -56,7 +52,7 @@ fun basis(value:String):String=when(value){"MEASURED"->"측정 시각";"REQUESTE
         }
         item { TrendChart(s.trend,s.maintenance,s.trendPeriod,Instant.parse(s.trendEnd),s.trendLimited,s.chartBusy,s.chartError,!s.busy,vm::trendPeriod) }
         item {
-            GardenSection("돌봄 타임라인","불러온 측정·관리 기록과 재배 이력을 함께 보여드려요")
+            GardenSection("돌봄 타임라인","최근 돌봄 기록 최대 10개와 재배 이력이에요. 측정은 차트와 측정 이력에서 확인해요.")
             Text("데이터 보존 상태는 식물 건강 판정이 아닙니다.",style=MaterialTheme.typography.bodySmall,color=Muted)
         }
         grouped.forEach { (day,events)->
@@ -66,12 +62,17 @@ fun basis(value:String):String=when(value){"MEASURED"->"측정 시각";"REQUESTE
             }}
         }
         if(s.maintenance.isEmpty()) item { Text("아직 관리 기록이 없습니다.",style=MaterialTheme.typography.bodySmall,color=Muted) }
-        if(s.moreMaintenance) item { TextButton(onClick={vm.moreHistory(true)},enabled=!s.busy){Text("관리 이력 더 보기")} }
-        item { OutlinedButton(onClick={history=true},modifier=Modifier.fillMaxWidth(),enabled=!s.busy){Text("전체 측정 이력 보기")} }
-        if(active) item { TextButton(onClick={ending=true},enabled=!s.busy&&s.pending==null){Text("재배 종료")} }
+        item { OutlinedButton(onClick={onHistoryLoad(true,0);history=true},modifier=Modifier.fillMaxWidth(),enabled=!s.busy){Text("전체 돌봄 기록 보기")} }
+        item { OutlinedButton(onClick={onHistoryLoad(false,0);history=true},modifier=Modifier.fillMaxWidth(),enabled=!s.busy){Text("전체 측정 이력 보기")} }
     }
-    if(history) CareHistorySheet(s.sessions,s.moreSessions,s.busy,{vm.moreHistory(false)},{history=false;vm.session(it.sessionId)},{history=false},s.error)
-    event?.let { CareEventSheet(it,c){event=null} }
+    if(history) {
+        if(s.historyMaintenance) CareRecordsSheet(s.careHistory,s.historyOffset,s.moreMaintenance,s.busy,s.error,
+            {onHistoryLoad(true,(s.historyOffset-50).coerceAtLeast(0))},{onHistoryLoad(true,s.historyOffset+50)},
+            { m->event=careEvents(c,listOf(m)).first { it.maintenance!=null };history=false },{history=false})
+        else CareHistorySheet(s.sessions,s.moreSessions,s.busy,{onHistoryLoad(false,s.historyOffset+50)},
+            {history=false;vm.session(it.sessionId)},{history=false},s.error,s.historyOffset,{onHistoryLoad(false,(s.historyOffset-50).coerceAtLeast(0))})
+    }
+    event?.let { entry->CareEventSheet(entry,c,{event=null},entry.maintenance?.let { m->{event=null;vm.editMaintenance(m.id)} },!s.busy&&s.pending==null) }
     if(ending) AlertDialog(onDismissRequest={ending=false},title={Text("재배를 종료할까요?")},
         text={Text("새 측정·관리 등록을 막습니다. 이미 요청한 측정의 결과는 계속 보존합니다.")},
         confirmButton={TextButton(onClick={ending=false;vm.end()}){Text("종료")}},dismissButton={TextButton(onClick={ending=false}){Text("취소")}})

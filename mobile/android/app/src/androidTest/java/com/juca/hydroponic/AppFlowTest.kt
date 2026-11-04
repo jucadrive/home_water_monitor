@@ -48,12 +48,23 @@ class AppFlowTest {
     private fun clickIn(list: String, text: String) {
         // A record name can still be visible in the previous screen while its detail HTTP calls complete.
         compose.waitUntil(30000) { compose.onAllNodesWithTag(list).fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(30000) { compose.onAllNodesWithText("불러오거나 처리 중이에요").fetchSemanticsNodes().isEmpty() }
         compose.onNodeWithTag(list).performScrollToNode(hasText(text))
         compose.onNodeWithText(text).performClick()
     }
+    private fun cultivationAction(label:String) {
+        compose.waitUntil(30000) { compose.onAllNodesWithTag("detail-list").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(30000) { compose.onAllNodesWithText("불러오거나 처리 중이에요").fetchSemanticsNodes().isEmpty() }
+        compose.onNodeWithTag("detail-list").performScrollToIndex(0)
+        compose.onNodeWithContentDescription("재배 메뉴").performClick()
+        compose.onNodeWithText(label).performClick()
+    }
     private fun screenshot(name: String) {
         val file = File(context.getExternalFilesDir("acceptance"), "$name.png")
-        compose.onRoot().captureToImage().asAndroidBitmap().let { bitmap ->
+        // Root enumeration order does not indicate Z order. Select the sheet's own list explicitly.
+        val target=if(compose.onAllNodesWithTag("care-history-list").fetchSemanticsNodes().isNotEmpty())
+            compose.onNodeWithTag("care-history-list") else compose.onRoot()
+        target.captureToImage().asAndroidBitmap().let { bitmap ->
             file.outputStream().use { check(bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)) }
         }
         // Gradle removes test APK data; preserve only our generated app image for host-side visual review.
@@ -72,7 +83,7 @@ class AppFlowTest {
         val args = InstrumentationRegistry.getArguments()
         val origin = requireNotNull(args.getString("serverOrigin")) { "Pass the isolated server origin explicitly" }
         val device = requireNotNull(args.getString("deviceId")) { "Pass the simulated device ID explicitly" }
-        val name = "[시험] 폰 재배 ${UUID.randomUUID().toString().take(8)}"
+        var name = "[시험] 폰 재배 ${UUID.randomUUID().toString().take(8)}"
         screenshot("garden-settings")
         check(BuildConfig.API_ORIGIN == origin) { "Build the debug APK with the isolated acceptanceOrigin" }
         waitText("내 계정 로그인")
@@ -110,6 +121,55 @@ class AppFlowTest {
         compose.onNodeWithText("작업량 ml · 선택").performTextInput("500")
         compose.onNodeWithText("관리 이력 등록").performScrollTo().performClick()
         waitText("마지막 전체 교체  2026.10.02 09:00")
+        cultivationAction("재배 정보 편집")
+        waitText("재배 정보 편집")
+        compose.onNodeWithText("식물명").performScrollTo().performTextReplacement("민트")
+        name += " 수정"
+        compose.onNodeWithText("재배 별명").performScrollTo().performTextReplacement(name)
+        compose.onNodeWithText("메모 · 선택").performScrollTo().performTextClearance()
+        screenshot("profile-edit")
+        compose.onNodeWithText("변경 저장").performScrollTo().performClick()
+        waitText(name)
+        clickIn("detail-list","전체 물 교체")
+        compose.onNodeWithText("이 기록 수정").performClick()
+        waitText("돌봄 기록 수정")
+        compose.onNodeWithText("물 보충").performClick()
+        compose.onNodeWithText("작업량 ml · 선택").performScrollTo().performTextReplacement("250")
+        compose.onNodeWithText("메모 · 선택").performScrollTo().performTextReplacement("정정된 관리 기록")
+        screenshot("care-edit")
+        compose.onNodeWithText("변경 저장").performScrollTo().performClick()
+        waitText(name)
+        compose.onNodeWithTag("detail-list").performScrollToIndex(0)
+        waitText("마지막 전체 교체  기록 없음")
+        // Seed only this isolated server through its authenticated API to exercise multiple pages.
+        kotlinx.coroutines.runBlocking {
+            val token=com.juca.hydroponic.data.OwnerSessionVault(context).read(origin)!!.accessToken
+            val api=com.juca.hydroponic.data.MonitorApi(origin,true,token)
+            val rows=org.json.JSONArray(api.request("GET","/api/cultivations?limit=50"))
+            val record=(0 until rows.length()).map{rows.getJSONObject(it).getJSONObject("cultivation")}.single{it.getString("name")==name}
+            val id=record.getString("id")
+            repeat(51) { index->
+                val body=org.json.JSONObject().put("type","TOP_UP").put("replacementScope",org.json.JSONObject.NULL)
+                    .put("occurredAt","2026-10-03T01:00:00Z").put("amountMl",1).put("memo","페이지 시험 $index")
+                api.request("POST","/api/cultivations/$id/water-maintenances",body.toString(),UUID.randomUUID().toString())
+            }
+        }
+        clickIn("detail-list","기록 새로고침")
+        clickIn("detail-list","전체 돌봄 기록 보기")
+        compose.onNodeWithTag("care-history-list").performScrollToNode(hasText("다음 50개"))
+        compose.onNodeWithText("다음 50개").performClick()
+        waitText("2페이지 · 최대 50개씩 표시")
+        compose.onNodeWithText("다음 50개").assertIsNotEnabled()
+        screenshot("care-history-page2")
+        compose.onNodeWithText("이전 50개").performClick()
+        compose.waitUntil(30000) { compose.onAllNodesWithText("불러오거나 처리 중이에요").fetchSemanticsNodes().isEmpty() }
+        compose.onNodeWithTag("care-history-list").performScrollToNode(hasText("1페이지 · 최대 50개씩 표시"))
+        waitText("1페이지 · 최대 50개씩 표시")
+        compose.onNodeWithText("닫기").performClick()
+        compose.onNodeWithText("뒤로").performClick()
+        waitText("오늘의 재배 기록")
+        clickIn("dashboard-list",name)
+        waitText(name)
         clickIn("detail-list", "$device · 측정 시작")
         waitText("장치 버퍼  RELEASE_CONFIRMED")
         compose.onNodeWithText("서버 보존  NORMAL").assertIsDisplayed()
@@ -136,8 +196,10 @@ class AppFlowTest {
         screenshot("cultivation-detail")
         clickIn("detail-list","전체 측정 이력 보기")
         compose.onNodeWithText("측정 이력").assertIsDisplayed()
+        compose.waitUntil(30000) { compose.onAllNodesWithText("불러오거나 처리 중이에요").fetchSemanticsNodes().isEmpty() }
+        compose.onNode(hasText("원본 60/60",substring=true) and hasAnyAncestor(hasTestTag("history-list"))).assertExists()
         compose.onNodeWithText("닫기").performClick()
-        clickIn("detail-list", "재배 종료")
+        cultivationAction("재배 종료")
         compose.onNodeWithText("종료", useUnmergedTree = true).performClick()
         // The lazy list remains at the bottom after closing; reveal its header before asserting the new state.
         compose.onNodeWithTag("detail-list").performScrollToIndex(0)

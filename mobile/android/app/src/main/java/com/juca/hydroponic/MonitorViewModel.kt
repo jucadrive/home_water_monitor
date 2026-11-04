@@ -47,6 +47,7 @@ class MonitorViewModel(application: Application) : AndroidViewModel(application)
                         busy = true, error = "로그인이 필요합니다. 확인 중인 요청은 보존했습니다.")
                     return@launch
                 }
+                if(e is ApiException && e.code=="VERSION_CONFLICT") mutable.update { it.copy(editConflict=true,editLatestReady=false) }
                 val text = if (e is ApiException) "요청 실패: ${e.code} (${e.status})" else e.message ?: "서버에 연결하지 못했습니다."
                 mutable.update { it.copy(error = text,readRetryAvailable=read && readRetry!=null) }
             } finally { mutable.update { it.copy(busy = false,initialLoading=false,pending = prefs.pending) } }
@@ -92,10 +93,9 @@ class MonitorViewModel(application: Application) : AndroidViewModel(application)
     private suspend fun loadDetail(id: String) {
         val path = "/api/cultivations/$id"
         val overview = Overview.parse(JSONObject(api().request("GET", path)))
-        val events = JSONArray(api().request("GET", "$path/water-maintenances?limit=50")).items(Maintenance::parse)
-        val samples = JSONArray(api().request("GET", "$path/measurement-sessions?limit=50")).items(SessionSummary::parse)
-        mutable.update { it.copy(screen = Screen.DETAIL, detail = overview, maintenance = events, sessions = samples,
-            moreMaintenance = events.size == 50, moreSessions = samples.size == 50,initialLoading=false) }
+        val events = JSONArray(api().request("GET", "$path/water-maintenances?limit=11")).items(Maintenance::parse)
+        mutable.update { it.copy(screen = Screen.DETAIL, detail = overview, maintenance = events.take(10), sessions = emptyList(),careHistory=emptyList(),historyOffset=0,
+            moreMaintenance = events.size > 10, moreSessions = false,initialLoading=false) }
         loadTrend(id,mutable.value.trendPeriod)
     }
     private suspend fun loadTrend(id:String,period:TrendPeriod) {
@@ -117,16 +117,62 @@ class MonitorViewModel(application: Application) : AndroidViewModel(application)
         loadTrend(id,period)
     }
     fun retryRead() { if(!mutable.value.busy && mutable.value.readRetryAvailable) readRetry?.invoke() }
-    fun moreHistory(maintenance: Boolean) { readRetry={moreHistory(maintenance)};call(true) {
-        val s = mutable.value; val id = checkNotNull(s.detail).cultivation.id
-        if (maintenance) {
-            val page = JSONArray(api().request("GET", "/api/cultivations/$id/water-maintenances?limit=50&offset=${s.maintenance.size}")).items(Maintenance::parse)
-            mutable.update { it.copy(maintenance = (s.maintenance + page).distinctBy { e -> e.id }, moreMaintenance = page.size == 50) }
-        } else {
-            val page = JSONArray(api().request("GET", "/api/cultivations/$id/measurement-sessions?limit=50&offset=${s.sessions.size}")).items(SessionSummary::parse)
-            mutable.update { it.copy(sessions = (s.sessions + page).distinctBy { e -> e.sessionId }, moreSessions = page.size == 50) }
+    fun historyPage(maintenance:Boolean,offset:Int=0) {
+        if(mutable.value.busy)return
+        require(offset>=0 && offset%50==0)
+        readRetry={historyPage(maintenance,offset)}
+        if(mutable.value.historyMaintenance!=maintenance) mutable.update { it.copy(sessions=emptyList(),careHistory=emptyList(),historyOffset=0) }
+        mutable.update { it.copy(historyMaintenance=maintenance) }
+        call(true) {
+            val id=checkNotNull(mutable.value.detail).cultivation.id
+            val path=if(maintenance) "water-maintenances" else "measurement-sessions"
+            val page=JSONArray(api().request("GET","/api/cultivations/$id/$path?limit=50&offset=$offset"))
+            mutable.update { if(maintenance) it.copy(careHistory=page.items(Maintenance::parse),moreMaintenance=page.length()==50,historyOffset=offset)
+                else it.copy(sessions=page.items(SessionSummary::parse),moreSessions=page.length()==50,historyOffset=offset) }
         }
-    } }
+    }
+    fun moreHistory(maintenance:Boolean)=historyPage(maintenance,mutable.value.historyOffset+50)
+    fun editProfile() {
+        if(!mutable.value.busy && mutable.value.pending==null) mutable.update { it.copy(screen=Screen.EDIT_PROFILE,editConflict=false,editLatestReady=false,editLatestProfile=null,error=null) }
+    }
+    fun editMaintenance(id:String)=call(true) {
+        check(mutable.value.pending==null)
+        val c=checkNotNull(mutable.value.detail).cultivation.id
+        val value=Maintenance.parse(JSONObject(api().request("GET","/api/cultivations/$c/water-maintenances/$id")))
+        mutable.update { it.copy(screen=Screen.EDIT_MAINTENANCE,editMaintenance=value,editConflict=false,editLatestReady=false,editLatestMaintenance=null) }
+    }
+    fun reloadEdit()=call(true) {
+        val s=mutable.value;val c=checkNotNull(s.detail).cultivation.id
+        if(s.screen==Screen.EDIT_PROFILE) {
+            val latest=Overview.parse(JSONObject(api().request("GET","/api/cultivations/$c"))).cultivation
+            mutable.update { it.copy(editLatestProfile=latest,editLatestReady=true) }
+        } else {
+            val id=checkNotNull(s.editMaintenance).id
+            val latest=Maintenance.parse(JSONObject(api().request("GET","/api/cultivations/$c/water-maintenances/$id")))
+            mutable.update { it.copy(editLatestMaintenance=latest,editLatestReady=true) }
+        }
+    }
+    fun acceptLatestEdit() {
+        if(mutable.value.busy || !mutable.value.editLatestReady)return
+        mutable.update { s->s.copy(detail=s.editLatestProfile?.let { s.detail?.copy(cultivation=it) }?:s.detail,
+            editMaintenance=s.editLatestMaintenance?:s.editMaintenance,editConflict=false,error=null) }
+    }
+    fun saveProfile(plant:String,name:String,memo:String) {
+        val c=mutable.value.detail?.cultivation?:return
+        if(mutable.value.editConflict)return
+        mutate("EDIT_PROFILE","/api/cultivations/${c.id}/profile",c.id,"PUT") {
+            JSONObject().put("expectedVersion",c.version).put("plantName",plant).put("name",name).put("memo",memo)
+        }
+    }
+    fun saveMaintenance(type:String,scope:String?,time:String,amount:String,memo:String) {
+        val c=mutable.value.detail?.cultivation?.id?:return
+        val m=mutable.value.editMaintenance?:return
+        if(mutable.value.editConflict)return
+        mutate("EDIT_MAINTENANCE","/api/cultivations/$c/water-maintenances/${m.id}",c,"PUT") {
+            JSONObject().put("expectedVersion",m.version).put("type",type).put("replacementScope",scope?:JSONObject.NULL)
+                .put("occurredAt",Dates.correctedInstant(time,m.occurredAt)).put("amountMl",if(amount.isBlank())JSONObject.NULL else amount.toBigDecimal()).put("memo",memo)
+        }
+    }
     fun unlinked(more: Boolean = false) { readRetry={unlinked(more)};call(true) {
         val previous = if (more) mutable.value.unlinked else emptyList()
         val page = JSONArray(api().request("GET", "/api/measurement-sessions?unlinked=true&limit=50&offset=${previous.size}")).items(SessionSummary::parse)
@@ -177,8 +223,8 @@ class MonitorViewModel(application: Application) : AndroidViewModel(application)
             JSONObject().put("type", "RETRY").put("sessionId", session)
         }
     }
-    private fun mutate(kind: String, path: String, context: String?, body: () -> JSONObject) = call {
-        handle(runner.execute(mutable.value.origin, path, body().toString(), kind, context))
+    private fun mutate(kind: String, path: String, context: String?, method:String="POST", body: () -> JSONObject) = call {
+        handle(runner.execute(mutable.value.origin, path, body().toString(), kind, context,method))
     }
     fun retryPending() = call { check(mutable.value.authenticated) { "먼저 로그인하세요." }; handle(runner.retry(mutable.value.origin)) }
     fun abandonPending() { if (!mutable.value.busy) { prefs.pending = null; mutable.update { it.copy(pending = null) } } }
@@ -196,7 +242,7 @@ class MonitorViewModel(application: Application) : AndroidViewModel(application)
         if (mutable.value.busy) return
         when (mutable.value.screen) {
             Screen.SESSION -> mutable.update { it.copy(screen = it.sessionParent) }
-            Screen.MAINTENANCE, Screen.COMMAND -> if (mutable.value.detail != null) detail(mutable.value.detail!!.cultivation.id) else unlinked()
+            Screen.EDIT_PROFILE, Screen.EDIT_MAINTENANCE, Screen.MAINTENANCE, Screen.COMMAND -> if (mutable.value.detail != null) detail(mutable.value.detail!!.cultivation.id) else unlinked()
             Screen.SETTINGS -> if (mutable.value.authenticated) list()
             else -> list()
         }

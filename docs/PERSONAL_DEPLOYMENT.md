@@ -1,5 +1,7 @@
 # 뽀싹 Docker 수동 배포
 
+> 재배 이름·메모/돌봄 기록 수정 업데이트는 [기존 서버 수동 교체 안내](CARE_RECORD_EDITING_SETUP.md)를 따른다. V11 포함 검증 JAR와 새 APK가 필요하며 기존 Compose·비밀·자동 측정 설정은 유지한다.
+
 > 매시간 자동 측정 확장은 [별도 적용 안내](HOURLY_AUTOMATIC_MEASUREMENT.md)를 따른다. 기본 OFF이며 기존 Compose/비밀번호/포트를 보존하고 opt-in overlay와 V10 포함 실행 JAR를 사용자 수동으로 적용한다.
 
 > 아래는 기본3개 서비스 배포다. 이미 배포한 서버에 장비 없는 MQTT 준비를 추가하려면 [MQTT 추가 안내](PERSONAL_MQTT.md)를 따른다. 기존 compose.yml/DB 포트/로그인 비밀을 덮어쓰지 않고 별도 추가 Compose를 병합한다.

@@ -3,15 +3,26 @@ package com.juca.hydroponic.data
 import java.util.UUID
 
 data class PendingMutation(val origin: String, val path: String, val body: String, val key: String,
-    val kind: String, val contextId: String?)
+    val kind: String, val contextId: String?, val method:String="POST") {
+    init { require(method in setOf("POST","PUT")) }
+    fun encode():String=org.json.JSONObject().put("origin",origin).put("path",path).put("body",body).put("key",key)
+        .put("kind",kind).put("contextId",contextId?:org.json.JSONObject.NULL).put("method",method).toString()
+    companion object {
+        fun decode(text:String):PendingMutation {
+            val j=org.json.JSONObject(text)
+            return PendingMutation(j.getString("origin"),j.getString("path"),j.getString("body"),j.getString("key"),
+                j.getString("kind"),j.text("contextId"),j.optString("method","POST"))
+        }
+    }
+}
 interface MutationStorage { var pending: PendingMutation? }
 data class MutationResult(val request: PendingMutation, val response: String)
 
 // Persist the exact request before sending it. A timeout must not silently create a different request key.
 class MutationRunner(private val storage: MutationStorage, private val remote: (String) -> Remote) {
-    suspend fun execute(origin: String, path: String, body: String, kind: String, contextId: String?): MutationResult {
+    suspend fun execute(origin: String, path: String, body: String, kind: String, contextId: String?,method:String="POST"): MutationResult {
         check(storage.pending == null) { "결과 확인이 필요한 요청을 먼저 처리하세요." }
-        val request = PendingMutation(origin, path, body, UUID.randomUUID().toString(), kind, contextId)
+        val request = PendingMutation(origin, path, body, UUID.randomUUID().toString(), kind, contextId,method)
         storage.pending = request
         return perform(request)
     }
@@ -22,7 +33,7 @@ class MutationRunner(private val storage: MutationStorage, private val remote: (
     }
     private suspend fun perform(request: PendingMutation): MutationResult {
         try {
-            val result = remote(request.origin).request("POST", request.path, request.body, request.key)
+            val result = remote(request.origin).request(request.method, request.path, request.body, request.key)
             storage.pending = null
             return MutationResult(request, result)
         } catch (e: ApiException) {

@@ -23,7 +23,10 @@
 - 2026-10-29 서버 매시간 자동 측정 전체 승인: docs/tasks/HOURLY_AUTOMATIC_MEASUREMENT.md. 기본 OFF·지정 장비/재배·회차 중복 방지/기록 및 기존 START 재사용, 서버 운영 적용은 사용자 수동이다.
 - 2026-10-30 Botanical Aqua Android UI 전체 승인: docs/tasks/BOTANICAL_AQUA_UI.md. 기존 API/인증/쓰기/탐색 보존, 조회 한도 있는 차트·디자인 시스템·전체 화면 및 격리 인수, 서버/펌웨어/배포·Git 커밋/푸시 제외.
 - 원본 비교 정책: docs/NEXT_MEASUREMENT_COMPARISON.md. 구현·검증 상태는 실제 소스와 HANDOFF를 확인한다.
+- 2026-10-30 재배 이름/메모·관리 기록 정정·돌봄/측정 이력 분리 전체 구현 승인: docs/tasks/CULTIVATION_EDITING_AND_CARE_HISTORY.md. 로컬 새 마이그레이션/백엔드/앱/격리 검증, 운영 적용은 사용자 수동이다.
+- 2026-10-30 사용자 직접 수정 지시: docs/tasks/DETAIL_HEADER_AND_HISTORY_SCROLL.md. 상세 압축/점3개 메뉴·이력 카드 제스처 회귀를 수행하며 서버/API는 유지한다.
 - 구축·기능별 인수 조건과 승인 범위는 docs/tasks/에 기록한다.
+- 2026-11-01 보관 원본 진단·복구 승인: docs/tasks/RETAINED_SESSION_RECOVERY.md. 사용자 수동 임시 로깅·동일 세션RETRY1회차·관측/원복, 서버 SSH·원본 삭제/강제해제 금지 유지.
 - 과거 페어 프로그래밍·사용자 직접 작성 지침은 현재 운영 규칙이 아니다.
 
 ## 3. Architecture & Decisions

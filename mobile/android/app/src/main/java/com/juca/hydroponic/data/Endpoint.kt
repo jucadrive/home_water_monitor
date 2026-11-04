@@ -26,4 +26,10 @@ object Dates {
     fun toInstant(input: String, zone: ZoneId = ZoneId.systemDefault()): String =
         LocalDateTime.parse(input, inputFormat).atZone(zone).toInstant().toString()
     fun nowInput(): String = LocalDateTime.now().format(inputFormat)
+    fun input(instant:String):String=java.time.Instant.parse(instant).atZone(ZoneId.systemDefault()).format(inputFormat)
+    fun correctedInstant(input:String,original:String):String=when {
+        input.contains('T')->java.time.Instant.parse(input).toString()
+        input==input(original)->original
+        else->toInstant(input)
+    }
 }

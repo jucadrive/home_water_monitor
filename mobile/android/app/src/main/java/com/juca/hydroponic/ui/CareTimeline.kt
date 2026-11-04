@@ -14,11 +14,9 @@ import java.time.format.DateTimeFormatter
 
 data class CareEvent(val key:String,val time:String,val title:String,val detail:String,val kind:String,
     val session:SessionSummary?=null,val maintenance:Maintenance?=null)
-fun careEvents(c:Cultivation,sessions:List<SessionSummary>,maintenance:List<Maintenance>):List<CareEvent> {
+fun careEvents(c:Cultivation,maintenance:List<Maintenance>):List<CareEvent> {
     val values=maintenance.map { CareEvent("m-${it.id}",it.occurredAt,maintenanceLabel(it),
         it.amountMl?.stripTrailingZeros()?.toPlainString()?.plus(" mL")?:"작업량 미상",if(it.type=="NUTRIENT_ADD") "add" else "water",maintenance=it) }+
-        sessions.map { CareEvent("s-${it.sessionId}",it.displayAt,"TDS 측정",
-            (if(it.preservationResult=="NORMAL") ppm(it.medianTdsPpm) else "불완전 보존 · 통계 없음")+" · "+basis(it.timeBasis),"measure",session=it) }+
         listOf(CareEvent("start-${c.id}",c.startedAt,"재배 시작",c.plantName,"plant"))+
         listOfNotNull(c.endedAt?.let { CareEvent("end-${c.id}",it,"재배 종료",c.name,"plant") })
     return values.sortedWith(compareByDescending<CareEvent> { Instant.parse(it.time) }.thenBy { it.key })

@@ -16,9 +16,15 @@ public class WaterMaintenanceEntity {
     @Column(name="amount_ml",precision=12,scale=2) private BigDecimal amountMl;
     @Column(nullable=false,length=2000) private String memo;
     @Column(name="created_at",nullable=false) private Instant createdAt;
+    @Column(name="updated_at",nullable=false) private Instant updatedAt;
+    @Column(nullable=false) private long version;
     protected WaterMaintenanceEntity() { }
     public WaterMaintenance snapshot() {
         return new WaterMaintenance(id,cultivationId,WaterMaintenance.Type.valueOf(type),
-                replacementScope==null?null:WaterMaintenance.Scope.valueOf(replacementScope),occurredAt,amountMl,memo,createdAt);
+                replacementScope==null?null:WaterMaintenance.Scope.valueOf(replacementScope),occurredAt,amountMl,memo,createdAt,updatedAt,version);
+    }
+    public void correct(WaterMaintenance value) {
+        type=value.type().name();replacementScope=value.replacementScope()==null?null:value.replacementScope().name();
+        occurredAt=value.occurredAt();amountMl=value.amountMl();memo=value.memo();updatedAt=value.updatedAt();version=value.version();
     }
 }

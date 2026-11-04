@@ -1,3 +1,55 @@
+# Git 반영 준비 — 2026-11-04
+
+- 사용자 지시로 원격 이력을 확인했다. main은 `fc89cde`(PR #17), 해당 main CI는 성공이다. `codex/cultivation-editing`의 원격 브랜치와 PR은 없고, 아래 세 작업의 48개 공개 소스·테스트·문서가 미커밋 상태였다.
+- 재배 정보·관리 기록 정정 및 제한된 이력 조회, 상세 헤더·스크롤 수정, 보관 원본 진단·복구 도구를 커밋 대상으로 준비했다. 기존 backend 270개, Android JVM 36개·UI 32개·별도 종단/제스처 검증, 복구 도구 8개 검증 결과를 재사용한다. 이번 확인에서 전체 빌드·장비 시험을 반복하지 않았다.
+- 비밀 검사 48파일/실제 비밀값 8개 대조 이슈0, diff 공백 검사 통과. 비밀 설정·첨부·APK/JAR·로컬 산출물은 제외한다. 자동 RETRY 후 START 정책은 제안 단계이며 이번 코드에 구현되지 않았다. 서버 SSH·운영 변경은 하지 않았다.
+- 커밋 초안: `feat: add care editing, bounded history and retained-session recovery tools`. 푸시·PR·main 병합의 승인 및 실행 결과는 후속 기록을 따른다.
+
+# 미전송 원본 복구·버퍼 해제 확인 — 2026-11-01
+
+- 사용자 운영 실행에서 동일 보관 세션 RETRY가성공했다.17:01:38KST NORMAL/RELEASE_CONFIRMED/IDLE·버퍼0·FRESH 확인. 같은 boot 유지,원본60개 보존 후 해제, 새 START/재부팅/DB강제해제 없음. [전체 증거·미확정 원인](tasks/RETAINED_SESSION_RECOVERY.md). 서버 SSH/실행은 사용자 직접이며 에이전트는하지않았다.
+- 첨부 로그의 TX접속→v2결과8450bytes→서버전달/PUBACK→v2보존확인 발행/장치전달과 DIAGNOSTICS_RESTORED 확인. 과거23시 최초실패원인은 아직미확정이나5회 실패 후 MANUAL_WAIT/자동START전용으로 장기차단된 메커니즘은 확인했다. 당시일시응답중단은 회복됐고 펌웨어영구정지로 확정하지 않는다.
+- 다음은 사용자 앱의 누락기록 조회와 다음 정각 자동 측정 확인이다. 자동 RETRY/장기대기 안내는 미구현이며 별도범위다. 기존코드·복구도구·문서는미커밋 상태로보존, Git발행 없음.
+
+## 진단 과정 체크포인트
+
+- 최신 사용자 실행: 로그인 성공, 장치60개 MANUAL_WAIT이지만STALE라 RETRY미전송. debug.txt의 실제 ESP32 RX는16:47:49재접속 후 응답 중단,16:48:35keepalive timeout으로 종료. 로그원복DIAGNOSTICS_RESTORED 확인. 상세는 위 작업 명세. 5초unknown접속은healthcheck와구분. 다음은 미니PC→마지막IP192.168.0.8 통신/현재 DB관측시각 확인이며 전원/원본은 유지한다. 원본 복구는 아직미확정.
+
+- 사용자 복구 도구는 DEVICE 출력 전 로그인403. 인증정보 없는 GET 비교에서 Python 기본 UA는Cloudflare403, ppossak-recovery/1.0은정상401/AUTH_REQUIRED 확인. 도구 UA 명시·비밀 없는 오류 단계/분류를 추가,8개 로컬 검사PASS. 이것은 장비 MQTT 장애와 별개의HTTP진입 차단이며 실제 운영 RETRY는 아직 미수행이다. 서버 보안 규칙 변경 없음. 사용자는 같은 명령 재실행 후 로그 capture/restore할 차례다.
+
+- 사용자 승인: 임시 브로커 진단 로깅/같은 보관 세션 RETRY1회차/관측/로깅 원복. 서버 SSH 금지 유지, 사용자 수동 실행. [사실·범위·실행 절차](tasks/RETAINED_SESSION_RECOVERY.md). 운영 복구는 아직 NOT VERIFIED.
+- 10월31일23시 명령 ACCEPTED/장치60개·MANUAL_WAIT·attempt5/서버 세션 미관측, 이후 CONTROL_BUSY로 자동 SKIPPED. 현재 상태 probe는정상. 서버/브로커 재시작0,23:02:57 EOF1줄. 최초 실패 지점은 아직 불명확하며 원본 삭제/보드 전원 재인가/DB busy강제 해제는 하지 않는다.
+- recover-personal-measurement.py와 mqtt-recovery-logging.sh 및 오프라인7검사 추가,7 PASS/실패0·오류0·건너뜀0. 계정/토큰 미출력, 상태변경 시 POST차단, 키·본문 선보존·POST자동재시도 없음, 설정 백업/바인드inode유지·HUP·원복을 mock으로 확인했다. 실제 Linux/Mosquitto 검증은 로컬 Docker OFF로 NOT RUN.
+- 업로드 `.tools/control-recovery-upload/mqtt-recovery-logging.sh`를 사용자 WinSCP 전송 후 서버 enable→PC 복구 도구→서버 capture/restore 순서다. 전원/원본 유지. 기존 앱/백엔드/펌웨어와 미커밋 변경을 보존했다. 커밋/푸시·운영 실행 없음.
+
+# 상세 헤더·카드 스크롤 수정 로컬 인수 완료 — 2026-10-30
+
+- 사용자 API 기능 확인 후 상세 압축/점3개 메뉴·이력 카드 스크롤 결함을 직접 수정 지시했다. [범위·원인·인수 기록](tasks/DETAIL_HEADER_AND_HISTORY_SCROLL.md). 상태 VERIFIED(로컬), 실제 폰의 원래 연속 떨림 최종 확인은 남음.
+- 상세의 나의 식물 일지/별도 편집 링크/하단 종료 버튼을 제거하고 이름 옆48dp 메뉴에 편집·종료를 모았다. 식물/상태/일수와 날짜를 압축, 긴 메모 펼침·종료 확인/pending 보호 유지. 이력은 시트 드래그/부분 확장을 끄고 고정90% 높이·고정 제목/닫기와 목록 스크롤을 분리했다.
+- 수정 전 카드 스와이프2개 모두 목록 상단1087→190px 이동으로 기대 실패, 수정 후 UI32개 PASS. 별도 메뉴 편집/종료 종단1개와 최종 실제 카드 스와이프2개(목록 진행/복귀·시트 위치 안정·오클릭 없음) PASS. 각 실패/오류/건너뜀0. Full debug/미서명release·JVM36개 새 실행 PASS, 최종 JVM은 UP-TO-DATE 재사용. Lint 오류0/기존 경고11. 테스트 약화/구현 후 자동 실패 없음.
+- APK `.tools/detail-scroll/ppossak-detail-scroll-debug.apk`, SHA256 `16A1DB1C6478BE2CA79AE7517FB6E16AAC477B7757998C8A38EE94EA5C58C720`, 표준 HTTPS. 이번에는 APK만 업데이트하면 된다. API/서버/펌웨어/자동 설정은 변경하지 않았고 백엔드270개는 앞선 검증 결과다.
+- 시험 API/DB/MQTT·reverse·소유 AVD 정리 완료. 코드와 캡처/기록은 `.tools/detail-scroll`로 구분 보존하며 비밀/생성물 제외. .kotlin 캐시를 루트 ignore에 추가. 기존 미커밋 변경을 유지하며 Git 발행·실폰 설치·서버/운영 데이터 조작 없음. 신규200줄 초과 없음, 기존 AppFlowTest221/ViewModel252줄은 리뷰 대상이다.
+
+# 재배 정보·관리 정정·이력 로컬 인수 완료 — 2026-10-30
+
+- 상태 VERIFIED(로컬), 사용자 최종 리뷰/운영 적용은 남음. [구현·실행별 결과](tasks/CULTIVATION_EDITING_AND_CARE_HISTORY.md), [서버 수동 적용](CARE_RECORD_EDITING_SETUP.md). 재배 정보 편집에서 식물명/재배 별명/메모, 관리 상세에서 이 기록 수정 제공. ID/원본/자동 측정 연결은 유지한다.
+- 백엔드 Full270개 새 실행 PASS, Android JVM36개 새 실행 PASS, UI27개 PASS, 별도 최종 격리 종단1개 PASS와 시트 캡처1개 PASS. 각 실패/오류/건너뜀0. 최종 HTTPS Full 성공(debug/미서명release), JVM은 UP-TO-DATE 재사용, 최종 Lint 오류0/기존 경고11. 이전 테스트 캡처/스크롤 실패와 수정은 작업 명세에 보존했다.
+- 제공 APK `.tools/care-editing/ppossak-editing-debug.apk`, JAR `.tools/care-editing/server-upload/app.editing.jar`, SHA256·실행 결과 `.tools/care-editing/result.json`. 서버 V11 업데이트를 먼저 적용해야 새 수정 API를 사용할 수 있다. 비밀/Compose/자동 측정 env/펌웨어를 교체할 필요 없다.
+- 등록 원래 입력과 현재 값을 분리하고 성공 영수증/전후 이력을 한 트랜잭션에 저장한다. 버전 충돌/재전송/구버전 POST pending을 보호한다. 타임라인 관리10개, 전체 이력50개 이전/다음·측정 지연 조회, 차트 한도 유지. 시험 서버3개/관련 컨테이너/reverse·소유 AVD 정리 완료. 운영 배포·실기기·Git 발행은 미수행. 신규200줄 초과 없음, 기존 ViewModel252줄/AppFlowTest214줄은 리뷰 대상.
+
+## 구현 중 체크포인트
+
+- 전체 구현 승인 후 codex/cultivation-editing에서 IN_PROGRESS. [계약·진행 결과](tasks/CULTIVATION_EDITING_AND_CARE_HISTORY.md), [수동 업데이트 안내](CARE_RECORD_EDITING_SETUP.md). 운영 서버/센서/SSH/자동 측정 설정은 변경하지 않았다.
+- 백엔드 V11·최초 등록 입력 보존·이름/메모/관리 정정·version 충돌·영수증/전후 이력 구현. Full270개 새 실행 PASS/실패0·오류0·건너뜀0,5분41초. Android 편집/PUT pending 호환·관리10개 미리보기·종류별50개 페이지 구현. 첫 Full JVM36개 PASS/실패0·오류0·건너뜀0, Lint 오류0/기존11경고, debug/미서명release 성공.
+- UI27개 PASS, 종단은 이력2페이지 시트 캡처에서 root2개로 실패해 캡처만 보완했다. 이전 결과 보존, 새 전용 API/DB/MQTT에서 종단1개만 재실행 중이다. 전체 완료 판정 전 종단/표준HTTPS APK 복원/캡처/정리가 남았다. 기존 ViewModel252줄·AppFlowTest207줄은 리뷰 대상이며 신규200줄 초과 파일은 없다. Git은 미커밋/unstaged다.
+
+## 문서 계약 체크포인트
+
+- 사용자는 기존 계획에 식물 이름 변경을 포함해 문서/계약을 확정하도록 지시했다. [명세·전체 구현 계획](tasks/CULTIVATION_EDITING_AND_CARE_HISTORY.md). 이번 실행은 문서만이며 제품 코드/DB/운영 데이터 변경 없음. 구현은 TODO/NOT VERIFIED, 전체 구현 착수 승인 대기다.
+- 식물명 plantName과 재배 별명 name 모두 메모와 함께 편집한다. PUT profile/관리 정정, version 충돌, 불변 등록 입력·수정 영수증/이력, 구버전 POST pending 호환을 명세했다. 종료 재배의 정보/과거 관리 정정은 허용하되 시작/종료/연결/측정 원본은 유지한다.
+- 상세는 관리10개 미리보기와 재배 이벤트, 전체 이력은 종류별50건 페이지로 제한한다. 측정은 최신 카드·차트·별도 이력으로 분리하며 무제한 누적/센서 데이터 삭제 없음. 차트 표식은 로드된 관리 범위임을 명시한다.
+- 기준 main fc89cde, PR #17 및 브랜치/PR/main CI 성공. 문서 단계는 diff/링크로 검증하고 코드 테스트는 NOT RUN. Git 발행/서버 SSH/배포/장비 조작은 이번 범위 밖이다.
+
 # Botanical Aqua UI 개편 사용자 리뷰·Git 통합 승인 — 2026-10-30
 
 - 사용자가 개선 UI를 리뷰하고 현재 작업의 커밋·푸시·PR·main 병합을 승인했다. UI 작업 상태 DONE. codex/botanical-aqua-ui의 공개 소스/테스트/문서27개를 통합하며 비밀·첨부·APK·캡처·로컬 산출물은 제외한다. 메시지 `feat: redesign Android care dashboard with botanical aqua UI`. 아래 로컬 인수/미수행 Git 기록은 승인 전 체크포인트다. 커밋/PR/CI 식별자는 통합 후 최종 보고를 따른다.
