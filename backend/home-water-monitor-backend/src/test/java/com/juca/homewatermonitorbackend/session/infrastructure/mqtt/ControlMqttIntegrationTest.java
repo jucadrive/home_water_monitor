@@ -45,6 +45,47 @@ class ControlMqttIntegrationTest {
     @Autowired com.juca.homewatermonitorbackend.session.application.control.ControlRuntime runtime;
     @Autowired com.juca.homewatermonitorbackend.session.infrastructure.persistence.AutomaticMeasurementRunStore automaticRuns;
     final ControlMessageCodec codec=new ControlMessageCodec();
+    @Autowired com.juca.homewatermonitorbackend.session.infrastructure.persistence.DeviceControlStore deviceStore;
+    @Autowired com.juca.homewatermonitorbackend.session.infrastructure.persistence.AutomaticRecoveryStore recoveryRuns;
+    @Test void hourlyRecoveryCommitsRetainedTemperatureSamplesReleasesThenStartsOnlyOneNewSession() throws Exception {
+        var target=UUID.randomUUID();var slot=java.time.Instant.parse("2026-11-04T06:00:00Z");
+        var json=tools.jackson.databind.json.JsonMapper.builder().build();
+        assertEquals(201,request("/api/cultivations",json.writeValueAsString(java.util.Map.of(
+            "plantName","basil","name","recovery","startedAt","2026-10-01T00:00:00Z")),target).status());
+        try(var device=new ControlFakeDevice(uri())) {
+            var first=request("/api/cultivations/"+target+"/measurement-commands",
+                json.writeValueAsString(java.util.Map.of("deviceId","esp32-bench")),UUID.randomUUID());
+            assertEquals(202,first.status(),first.body().toString());
+            String original=first.body().get("commandId").asString(),session=first.body().get("sessionId").asString();
+            awaitState(original,"ACCEPTED",10);
+            synchronized(device) {
+                device.status.put("state","MANUAL_WAIT").put("sampleCount",60).put("finalized",true).put("attempt",5);device.emit();
+                device.recoverResults=true;
+            }
+            long deadline=System.nanoTime()+java.util.concurrent.TimeUnit.SECONDS.toNanos(25);
+            while(System.nanoTime()<deadline && (!"FRESH".equals(runtime.liveness("esp32-bench"))
+                    || deviceStore.observation("esp32-bench")==null
+                    || !"MANUAL_WAIT".equals(deviceStore.observation("esp32-bench").status().state())))Thread.sleep(25);
+            assertEquals("FRESH",runtime.liveness("esp32-bench"));
+            var recovery=new com.juca.homewatermonitorbackend.session.application.automatic.AutomaticBufferRecovery(deviceStore,recoveryRuns,runtime);
+            var auto=new com.juca.homewatermonitorbackend.session.application.automatic.AutomaticMeasurementService(
+                new com.juca.homewatermonitorbackend.session.application.automatic.AutomaticMeasurementProperties(true,"esp32-bench",target,true),
+                automaticRuns,runtime,slot.minusSeconds(1),recovery);
+            auto.runAt(slot);auto.runAt(slot.plusSeconds(20));
+            var retry=jdbc.queryForMap("select * from tds_automatic_recovery where device_id='esp32-bench' and scheduled_at=?",java.sql.Timestamp.from(slot));
+            assertEquals("RECOVERED",retry.get("outcome"));assertEquals(UUID.fromString(session),retry.get("session_id"));
+            assertEquals(60,jdbc.queryForObject("select count(*) from tds_measurement where session_id=?",Integer.class,UUID.fromString(session)));
+            assertEquals(50,jdbc.queryForObject("select stats_sample_count from tds_session where session_id=?",Integer.class,UUID.fromString(session)));
+            assertEquals("RELEASE_CONFIRMED",command(retry.get("command_id").toString()).body().get("deviceBuffer").asString());
+            var next=jdbc.queryForObject("select command_id from tds_automatic_measurement_run where cultivation_id=?",UUID.class,target);
+            awaitState(next.toString(),"ACCEPTED",10);
+            assertNotEquals(session,command(next.toString()).body().get("sessionId").asString());
+            assertEquals(3,device.executions.get());assertEquals(1,jdbc.queryForObject("select count(*) from tds_automatic_recovery where scheduled_at=?",Integer.class,java.sql.Timestamp.from(slot)));
+            assertEquals(3,jdbc.queryForObject("select count(*) from tds_device_command where cultivation_id=? or command_id=?",Integer.class,target,retry.get("command_id")));
+        } finally {
+            jdbc.update("update tds_device_control set active_command_id=null,held_session_id=null where held_session_id in (select session_id from tds_device_command where cultivation_id=?)",target);
+        }
+    }
     @Test void hourlyStartUsesRealMqttTemperaturePreservationAndExistingReleaseProtection() throws Exception {
         var target=UUID.randomUUID();var slot=java.time.Instant.parse("2026-11-01T00:00:00Z");
         request("/api/cultivations","{\"plantName\":\"basil\",\"name\":\"automatic\",\"startedAt\":\"2026-10-01T00:00:00Z\"}",target);

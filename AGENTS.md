@@ -27,6 +27,7 @@
 - 2026-10-30 사용자 직접 수정 지시: docs/tasks/DETAIL_HEADER_AND_HISTORY_SCROLL.md. 상세 압축/점3개 메뉴·이력 카드 제스처 회귀를 수행하며 서버/API는 유지한다.
 - 구축·기능별 인수 조건과 승인 범위는 docs/tasks/에 기록한다.
 - 2026-11-01 보관 원본 진단·복구 승인: docs/tasks/RETAINED_SESSION_RECOVERY.md. 사용자 수동 임시 로깅·동일 세션RETRY1회차·관측/원복, 서버 SSH·원본 삭제/강제해제 금지 유지.
+- 2026-11-04 보관 원본 자동 복구 전체 승인: docs/tasks/AUTOMATIC_BUFFER_RECOVERY.md. 기본OFF·매 정각 최대1회차 RETRY/360초 관측·정상 보존/해제 후 START·V12/격리 인수/진단 로그. 운영 적용은 사용자 수동이며 앱·펌웨어·공개 MQTT 계약은 유지한다.
 - 과거 페어 프로그래밍·사용자 직접 작성 지침은 현재 운영 규칙이 아니다.
 
 ## 3. Architecture & Decisions

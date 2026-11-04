@@ -14,9 +14,16 @@ public class AutomaticMeasurementService {
     private final AutomaticMeasurementRunStore runs;
     private final ControlRuntime control;
     private final Instant startedAt;
+    private final AutomaticBufferRecovery recovery;
     public AutomaticMeasurementService(AutomaticMeasurementProperties settings, AutomaticMeasurementRunStore runs,
                                        ControlRuntime control, Instant startedAt) {
+        this(settings,runs,control,startedAt,null);
+    }
+    public AutomaticMeasurementService(AutomaticMeasurementProperties settings, AutomaticMeasurementRunStore runs,
+                                       ControlRuntime control, Instant startedAt,AutomaticBufferRecovery recovery) {
         this.settings=settings; this.runs=runs; this.control=control; this.startedAt=startedAt;
+        this.recovery=recovery;
+        if(settings.recoveryEnabled() && recovery==null)throw new IllegalArgumentException("Recovery coordinator required");
         control.requireDevice(settings.deviceId());
     }
     public void runAt(Instant now) {
@@ -26,6 +33,11 @@ public class AutomaticMeasurementService {
         var key=UUID.randomUUID();
         if (!runs.claim(settings.deviceId(), settings.cultivationId(), slot, key)) return;
         try {
+            if(settings.recoveryEnabled()) {
+                String reason=recovery.beforeStart(settings.deviceId(),settings.cultivationId(),slot);
+                if(reason!=null) { runs.finish(key,"SKIPPED",reason);return; }
+            }
+            if(Thread.currentThread().isInterrupted()) { runs.finish(key,"UNKNOWN","WORKER_INTERRUPTED");return; }
             control.submit(key, settings.deviceId(), "START", null, settings.cultivationId());
         } catch (ControlException e) {
             runs.finish(key, "SKIPPED", e.code()); return;

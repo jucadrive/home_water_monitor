@@ -60,4 +60,27 @@ class AutomaticMeasurementServiceTest {
         assertThrows(IllegalArgumentException.class,()->new AutomaticMeasurementProperties(true,"bad/+",cultivation));
         assertThrows(IllegalArgumentException.class,()->new AutomaticMeasurementProperties(true,"sensor",new UUID(0,0)));
     }
+    @Test void recoveredBufferPrecedesNewStartAndUsesDifferentRequestKeys() {
+        var recovery=mock(AutomaticBufferRecovery.class);
+        when(runs.claim(anyString(),any(),any(),any())).thenReturn(true);
+        new AutomaticMeasurementService(new AutomaticMeasurementProperties(true,"sensor",cultivation,true),runs,control,
+            hour.minusSeconds(1),recovery).runAt(hour);
+        var order=inOrder(runs,recovery,control);
+        order.verify(runs).claim(eq("sensor"),eq(cultivation),eq(hour),any());
+        order.verify(recovery).beforeStart("sensor",cultivation,hour);
+        order.verify(control).submit(any(),eq("sensor"),eq("START"),isNull(),eq(cultivation));
+    }
+    @Test void failedRecoverySkipsStartAndRecordsReason() {
+        var recovery=mock(AutomaticBufferRecovery.class);
+        when(runs.claim(anyString(),any(),any(),any())).thenReturn(true);
+        when(recovery.beforeStart(any(),any(),any())).thenReturn("RECOVERY_TIMEOUT");
+        new AutomaticMeasurementService(new AutomaticMeasurementProperties(true,"sensor",cultivation,true),runs,control,
+            hour.minusSeconds(1),recovery).runAt(hour);
+        verify(control,never()).submit(any(),any(),any(),any(),any());
+        verify(runs).finish(any(),eq("SKIPPED"),eq("RECOVERY_TIMEOUT"));
+    }
+    @Test void recoveryCannotBeEnabledWithoutCoordinator() {
+        assertThrows(IllegalArgumentException.class,()->new AutomaticMeasurementService(
+            new AutomaticMeasurementProperties(true,"sensor",cultivation,true),runs,control,hour));
+    }
 }

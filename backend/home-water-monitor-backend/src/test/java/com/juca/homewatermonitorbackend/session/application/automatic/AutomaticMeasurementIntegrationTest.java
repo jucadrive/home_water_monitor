@@ -32,6 +32,8 @@ class AutomaticMeasurementIntegrationTest {
     @Autowired CultivationService cultivations;
     @Autowired JdbcTemplate jdbc;
     @Autowired ApplicationContext context;
+    @Autowired com.juca.homewatermonitorbackend.session.infrastructure.persistence.DeviceControlStore devices;
+    @Autowired com.juca.homewatermonitorbackend.session.infrastructure.persistence.AutomaticRecoveryStore recoveries;
     final Instant hour=Instant.parse("2026-10-29T03:00:00Z");
     UUID cultivation; String device;
     @BeforeEach void target() {
@@ -91,5 +93,57 @@ class AutomaticMeasurementIntegrationTest {
         service().runAt(hour.plusSeconds(3600));
         assertEquals("SUBMITTED",outcome(hour));assertEquals(1,count("tds_device_command"));
         assertEquals(original.commandId(),jdbc.queryForObject("select command_id from tds_automatic_measurement_run where device_id=? and scheduled_at=?",UUID.class,device,java.sql.Timestamp.from(hour)));
+    }
+    ControlCommand held() {
+        var boot=UUID.randomUUID();var window=UUID.randomUUID();
+        var idle=new ControlModel.Status(1,"DEVICE_STATUS",device,boot,1,1,UUID.randomUUID(),
+            new ControlModel.Window(window,10000),"IDLE",null,0,false,0,0,"MQTT",true,null,null,null,null);
+        commands.observe(idle,true,UUID.randomUUID(),Instant.now());
+        var original=commands.reserve(UUID.randomUUID(),device,"START",null,cultivation);
+        commands.probing(original.commandId());commands.dispatch(original.commandId(),idle,"{}");
+        var waiting=new ControlModel.Status(1,"DEVICE_STATUS",device,boot,2,100,UUID.randomUUID(),
+            new ControlModel.Window(window,10000),"MANUAL_WAIT",original.sessionId(),60,true,1,5,"MQTT",true,null,null,
+            new ControlModel.Execution(original.commandId(),"START",original.sessionId(),window),null);
+        commands.observe(waiting,true,UUID.randomUUID(),Instant.now());return devices.command(original.commandId());
+    }
+    RecoveryExpectation expectation(ControlCommand c) {
+        return new RecoveryExpectation(c.commandId(),c.targetBootId(),c.commandId(),1,cultivation);
+    }
+    @Test void recoveryIntentIsUniqueAndCommittedBeforeARequestAndReconciledWithoutResend() {
+        var original=held();var key=UUID.randomUUID();
+        assertTrue(runs.claim(device,cultivation,hour,UUID.randomUUID()));
+        assertTrue(recoveries.prepare(device,hour,original.sessionId(),original.targetBootId(),key));
+        assertFalse(recoveries.prepare(device,hour,original.sessionId(),original.targetBootId(),UUID.randomUUID()));
+        recoveries.reconcileBefore(hour.plusSeconds(3600));
+        assertEquals("UNKNOWN",jdbc.queryForObject("select outcome from tds_automatic_recovery where retry_key=?",String.class,key));
+        assertEquals(1,count("tds_device_command"));assertEquals(original.sessionId(),devices.slot(device).held());
+    }
+    @Test void guardedRecoveryReservesOnlyTheMatchingBuffer() {
+        var original=held();
+        var retry=commands.reserve(UUID.randomUUID(),device,"RETRY",original.sessionId(),null,expectation(original));
+        assertEquals(original.sessionId(),retry.sessionId());assertNotEquals(original.commandId(),retry.commandId());
+    }
+    @Test void manualRetryWinningTheRaceCannotBeReplacedByAutomaticRecovery() {
+        var original=held();var manual=commands.reserve(UUID.randomUUID(),device,"RETRY",original.sessionId());
+        var error=assertThrows(ControlException.class,()->commands.reserve(UUID.randomUUID(),device,"RETRY",original.sessionId(),null,expectation(original)));
+        assertEquals("RECOVERY_STATE_CHANGED",error.code());assertEquals(manual.commandId(),devices.slot(device).active());
+        assertEquals(2,count("tds_device_command"));
+    }
+    @Test void changedBootRoundOrCultivationCannotPassReservationGuard() {
+        var c=held();
+        for(var e:List.of(new RecoveryExpectation(c.commandId(),UUID.randomUUID(),c.commandId(),1,cultivation),
+                new RecoveryExpectation(c.commandId(),c.targetBootId(),c.commandId(),2,cultivation),
+                new RecoveryExpectation(c.commandId(),c.targetBootId(),c.commandId(),1,UUID.randomUUID())))
+            assertEquals("RECOVERY_STATE_CHANGED",assertThrows(ControlException.class,
+                ()->commands.reserve(UUID.randomUUID(),device,"RETRY",c.sessionId(),null,e)).code());
+        assertEquals(1,count("tds_device_command"));
+    }
+    @Test void committedRecoveryCommandIsLinkedAfterProcessInterruptionWithoutReissue() {
+        var c=held();var key=UUID.randomUUID();runs.claim(device,cultivation,hour,UUID.randomUUID());
+        recoveries.prepare(device,hour,c.sessionId(),c.targetBootId(),key);
+        var retry=commands.reserve(key,device,"RETRY",c.sessionId(),null,expectation(c));
+        recoveries.reconcileBefore(hour.plusSeconds(3600));
+        assertEquals(retry.commandId(),jdbc.queryForObject("select command_id from tds_automatic_recovery where retry_key=?",UUID.class,key));
+        assertEquals(2,count("tds_device_command"));assertEquals(c.sessionId(),devices.slot(device).held());
     }
 }

@@ -19,6 +19,8 @@ class AutomaticMeasurementConfigurationTest {
         return new ApplicationContextRunner().withUserConfiguration(AutomaticMeasurementConfiguration.class)
             .withBean(ControlRuntime.class,()->control).withBean(CultivationService.class,()->cultivations)
             .withBean(AutomaticMeasurementRunStore.class,()->mock(AutomaticMeasurementRunStore.class))
+            .withBean(com.juca.homewatermonitorbackend.session.infrastructure.persistence.DeviceControlStore.class,()->mock(com.juca.homewatermonitorbackend.session.infrastructure.persistence.DeviceControlStore.class))
+            .withBean(com.juca.homewatermonitorbackend.session.infrastructure.persistence.AutomaticRecoveryStore.class,()->mock(com.juca.homewatermonitorbackend.session.infrastructure.persistence.AutomaticRecoveryStore.class))
             .withPropertyValues("water-monitor.control.enabled=true", "water-monitor.automatic-measurement.enabled=true",
                 "water-monitor.automatic-measurement.device-id=sensor",
                 "water-monitor.automatic-measurement.cultivation-id="+target);
@@ -47,5 +49,10 @@ class AutomaticMeasurementConfigurationTest {
     @Test void nonexistentCultivationFailsStartupRatherThanRunningWithoutATarget() {
         when(cultivations.get(target)).thenThrow(new CultivationException(404,"CULTIVATION_NOT_FOUND"));
         enabled().run(c->assertNotNull(c.getStartupFailure()));
+    }
+    @Test void recoveryIsOptInAndBindsOnlyWhenExplicitlyEnabled() {
+        enabled().run(c->assertFalse(c.getBean(AutomaticMeasurementProperties.class).recoveryEnabled()));
+        enabled().withPropertyValues("water-monitor.automatic-measurement.recovery-enabled=true")
+            .run(c->{assertNull(c.getStartupFailure());assertTrue(c.getBean(AutomaticMeasurementProperties.class).recoveryEnabled());});
     }
 }

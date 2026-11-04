@@ -17,6 +17,7 @@ water-monitor:
     enabled: ${PPOSSAK_AUTO_MEASUREMENT_ENABLED:false}
     device-id: ${PPOSSAK_AUTO_MEASUREMENT_DEVICE_ID:}
     cultivation-id: ${PPOSSAK_AUTO_MEASUREMENT_CULTIVATION_ID:}
+    recovery-enabled: ${PPOSSAK_AUTO_RECOVERY_ENABLED:false}
   auth:
     username: ${PPOSSAK_AUTH_USERNAME:}
     password-hash: ${PPOSSAK_AUTH_PASSWORD_HASH:}

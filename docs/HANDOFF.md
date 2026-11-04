@@ -1,3 +1,15 @@
+# 보관 원본 우선 자동 복구 로컬 검증 완료 — 2026-11-04
+
+- Git 체크포인트: 사용자가 이번 작업의 Git 반영을 지시했다. 원격 main b1aacb2와 기준 일치, 공개 소스/테스트/문서32개만 커밋한다. 메시지 feat: recover retained sessions before hourly measurements. 297개 성공 이후 제품 코드 변경이 없어 검증을 재사용하며 diff·비밀 검사를 다시 통과했다. 푸시·PR·main 병합 범위는 저장소 규칙에 따라 별도 확인한다.
+
+- 사용자 전체 계획 승인 후 codex/automatic-buffer-recovery에서 구현 VERIFIED(로컬). 기준 main b1aacb2는 PR #18 병합/푸시·PR·main CI 성공이며 이전 Git 준비 기록은 당시 이력이다. [계약·결과·실패 수정](tasks/AUTOMATIC_BUFFER_RECOVERY.md), [수동 업데이트](AUTOMATIC_BUFFER_RECOVERY_SETUP.md).
+- 기본OFF recovery-enabled·V12 별도 복구 기록·지정 장비/재배·FRESH/동일 버퍼·장치 잠금 안 경합 검증. 정각 RETRY 최대1회차/360초 관측 후 NORMAL/60개 서버 보존·해제/IDLE·슬롯 해제 모두 확인해야 현재 시각 START. 별도 단일 worker/대기열 없음·재시작 미재발행·원본 삭제/강제해제 없음.
+- backend Full297개 새 실행 PASS/실패0·오류0·건너뜀0/exit0/5분44초. PostgreSQL 수동 경합·재시작/V11→V12 보존, 실제 시험 MQTT 재전송60개/통계50→보존/해제→새 세션, 시간초과/STALE/소진/재부팅 등 검증. 자동 수정3/5 및 이전 실패 증거 보존. backend 정적/Lint/아키텍처 자동 검사는 MISSING. 앱/펌웨어는 변경 없이 이전 결과 재사용.
+- Compose 기본/OFF/ON3조건 PASS·기존4서비스/포트 제한 유지. 최종 비밀 검사32파일/실제 값8개 대조 이슈0·diff 검사 PASS. 신규200줄 초과 없음, 기존 MQTT 통합 테스트256줄 리뷰 대상. 테스트 컨테이너 잔여0 확인.
+- 배포 묶음 .tools/automatic-recovery/server-upload/에 app.recovery.jar/compose.automatic-measurement.recovery.yml/sha256.json 준비. JAR SHA256 834B505FEDA9752F3FB63311BDB655EBFE4FA4EC4B03FC10B83B9DAF7FB2013F. 비밀/env·앱·펌웨어·브로커 파일은 교체하지 않는다. 운영 적용·실물 회귀는 NOT RUN, 서버 SSH/원격 조작·Git 커밋/푸시 없음.
+- 11월3일21시 최초 전송 실패 원인은 과거 필터 로그 없음으로 미확정이다. 11월4일 수동 RETRY의 결과/보존 확인 전달·로그 원복은 확인했으나 Python 최종 해제 출력은 미제공이다. 배포 전 IDLE·보관0/FRESH를 확인한다. 새 진단 로그는 수신/커밋/보존 확인 발행·MANUAL_WAIT·자동 복구 단계를 구분한다.
+- 다음은 사용자 수동 백업/V12 업데이트·PPOSSAK_AUTO_RECOVERY_ENABLED=true 활성화 후 다음 정각 실물 인수다. 기본OFF라 현재 운영 서버 동작은 아직 바뀌지 않았다. 누락 회차 보충·최초 장애 제거/장기 안정성 보장은 하지 않는다.
+
 # Git 반영 준비 — 2026-11-04
 
 - 사용자 지시로 원격 이력을 확인했다. main은 `fc89cde`(PR #17), 해당 main CI는 성공이다. `codex/cultivation-editing`의 원격 브랜치와 PR은 없고, 아래 세 작업의 48개 공개 소스·테스트·문서가 미커밋 상태였다.

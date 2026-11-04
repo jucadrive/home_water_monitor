@@ -24,7 +24,7 @@ class CareEditingMigrationTest {
                 """,m,c);
         var beforeC=jdbc.queryForObject("select to_jsonb(c)::text from cultivation c",String.class);
         var beforeM=jdbc.queryForObject("select to_jsonb(m)::text from water_maintenance m",String.class);
-        var flyway=Flyway.configure().dataSource(source).load();assertEquals(1,flyway.migrate().migrationsExecuted);flyway.validate();
+        var flyway=Flyway.configure().dataSource(source).load();assertEquals(2,flyway.migrate().migrationsExecuted);flyway.validate();
         assertEquals(beforeC,jdbc.queryForObject("""
                 select (to_jsonb(c)-'version'-'initial_plant_name'-'initial_name'-'initial_memo')::text from cultivation c
                 """,String.class));

@@ -3,6 +3,8 @@ package com.juca.homewatermonitorbackend.session.infrastructure.scheduling;
 import com.juca.homewatermonitorbackend.session.application.automatic.*;
 import com.juca.homewatermonitorbackend.session.application.control.ControlRuntime;
 import com.juca.homewatermonitorbackend.session.infrastructure.persistence.AutomaticMeasurementRunStore;
+import com.juca.homewatermonitorbackend.session.infrastructure.persistence.AutomaticRecoveryStore;
+import com.juca.homewatermonitorbackend.session.infrastructure.persistence.DeviceControlStore;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -17,9 +19,10 @@ import com.juca.homewatermonitorbackend.cultivation.application.CultivationServi
 @EnableScheduling
 public class AutomaticMeasurementConfiguration {
     @Bean AutomaticMeasurementService automaticMeasurementService(AutomaticMeasurementProperties settings,
-            AutomaticMeasurementRunStore runs, ControlRuntime control, CultivationService cultivations) {
+            AutomaticMeasurementRunStore runs, ControlRuntime control, CultivationService cultivations,
+            DeviceControlStore devices,AutomaticRecoveryStore recoveries) {
         cultivations.get(settings.cultivationId());
-        return new AutomaticMeasurementService(settings,runs,control,Instant.now());
+        return new AutomaticMeasurementService(settings,runs,control,Instant.now(),new AutomaticBufferRecovery(devices,recoveries,control));
     }
     @Bean HourlyMeasurementJob hourlyMeasurementJob(AutomaticMeasurementService service) {
         return new HourlyMeasurementJob(service);
